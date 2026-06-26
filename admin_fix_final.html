@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin KPU - Github Host</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -84,34 +84,71 @@
     </div>
 
     <script>
-        // Gunakan URL Web App Google Apps Script Anda yang aktif
+        // SPREADSHEET KONFIGURASI
+        const SPREADSHEET_ID = "169wokS5-whDT9iqtT6nDQTgJxw_LGtJgnp0TiWTvYGI";
         const BASE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFi2rasPQracQJ9WMU3805SjnmfyNxtMYIli0rzLuWI-Yfx2m3Q_aXLGLgTJ7fh41U/exec";
         
+        // Menggunakan Google Visualization API (gviz) untuk pembacaan data setting secara instan & bebas CORS!
+        // Parameter 'gid=1264426514' atau 'sheet=setting' digunakan untuk menargetkan sheet 'setting'
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=setting`;
+
         const form = document.getElementById('adminSettingForm');
         const statusMessage = document.getElementById('statusMessage');
         const syncStatus = document.getElementById('syncStatus');
         const syncDot = document.getElementById('syncDot');
         const syncText = document.getElementById('syncText');
 
-        // Fungsi JSONP untuk membaca data awal dari Spreadsheet (Bypass CORS)
-        function getSettingsJSONP() {
-            return new Promise((resolve, reject) => {
-                const callbackName = 'google_cb_' + Math.floor(Math.random() * 1000000);
-                const url = `${BASE_SCRIPT_URL}?request=get_setting&callback=${callbackName}`;
-                
-                window[callbackName] = function(data) {
-                    delete window[callbackName];
-                    document.getElementById(callbackName)?.remove();
-                    resolve(data);
-                };
+        // Fungsi membaca konfigurasi menggunakan Google Sheets gviz API
+        async function loadCurrentConfig() {
+            syncStatus.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest";
+            syncDot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            syncText.innerText = "Memuat";
 
-                const script = document.createElement('script');
-                script.id = callbackName;
-                script.src = url;
-                script.onerror = () => reject(new Error("Gagal mengambil data dari Google Sheet"));
-                document.head.appendChild(script);
-            });
+            try {
+                const response = await fetch(SHEET_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const text = await response.text();
+                // Google Sheets API mengembalikan prefix google.visualization.Query.setResponse(...)
+                // Kita perlu memotong teks awal dan akhir agar menjadi JSON murni yang valid
+                const startIdx = text.indexOf('{');
+                const endIdx = text.lastIndexOf('}') + 1;
+                const jsonStr = text.substring(startIdx, endIdx);
+                const jsonData = JSON.parse(jsonStr);
+                
+                // Ekstrak baris data dari objek tabel gviz
+                const rows = jsonData.table.rows;
+                
+                // Memetakan nilai sel B1 s.d B5 secara dinamis
+                // Kolom B berada pada indeks ke-1 di array rows (c[1])
+                const jamMasukVal = rows[0]?.c[1]?.v || "";
+                const jamPulangVal = rows[1]?.c[1]?.v || "";
+                const latitudeVal = rows[2]?.c[1]?.v || "";
+                const longitudeVal = rows[3]?.c[1]?.v || "";
+                const radiusVal = rows[4]?.c[1]?.v || "";
+
+                // Update UI Status
+                syncStatus.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest";
+                syncDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                syncText.innerText = "Sinkron";
+
+                // Taruh nilai aktif ke dalam placeholder
+                document.getElementById('jamMasuk').placeholder = jamMasukVal ? `Sedia ada: ${jamMasukVal}` : "Contoh: 06.00 s.d 8.00";
+                document.getElementById('jamPulang').placeholder = jamPulangVal ? `Sedia ada: ${jamPulangVal}` : "Contoh: 16.00 s.d 24.00";
+                document.getElementById('lat').placeholder = latitudeVal ? `Sedia ada: ${latitudeVal}` : "Contoh: -6.1751";
+                document.getElementById('lng').placeholder = longitudeVal ? `Sedia ada: ${longitudeVal}` : "Contoh: 106.8271";
+                document.getElementById('radius').placeholder = radiusVal ? `Sedia ada: ${radiusVal}` : "Contoh: 50";
+
+            } catch (err) {
+                syncStatus.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest";
+                syncDot.className = "w-2 h-2 rounded-full bg-rose-500";
+                syncText.innerText = "Error";
+                console.error("Gagal mengambil data dari Google Sheet:", err.message);
+            }
         }
+
+        // Jalankan pemuatan data saat halaman dibuka
+        window.onload = loadCurrentConfig;
 
         // Fungsi JSONP untuk mengirim pembaruan data secara parsial (Bebas CORS di GitHub!)
         function saveSettingsJSONP(payload) {
@@ -141,38 +178,6 @@
                 document.head.appendChild(script);
             });
         }
-
-        // Fungsi untuk memuat data konfigurasi saat ini ke dalam placeholder input
-        function loadCurrentConfig() {
-            syncStatus.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest";
-            syncDot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
-            syncText.innerText = "Memuat";
-
-            getSettingsJSONP()
-                .then(data => {
-                    if (data && data.success) {
-                        syncStatus.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest";
-                        syncDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                        syncText.innerText = "Sinkron";
-
-                        // Taruh data sedia ada sebagai placeholder agar admin tahu nilai aktif saat ini
-                        document.getElementById('jamMasuk').placeholder = data.jamMasuk ? `Sedia ada: ${data.jamMasuk}` : "Contoh: 06.00 s.d 8.00";
-                        document.getElementById('jamPulang').placeholder = data.jamPulang ? `Sedia ada: ${data.jamPulang}` : "Contoh: 16.00 s.d 24.00";
-                        document.getElementById('lat').placeholder = data.latitude ? `Sedia ada: ${data.latitude}` : "Contoh: -6.1751";
-                        document.getElementById('lng').placeholder = data.longitude ? `Sedia ada: ${data.longitude}` : "Contoh: 106.8271";
-                        document.getElementById('radius').placeholder = data.radius ? `Sedia ada: ${data.radius}` : "Contoh: 50";
-                    }
-                })
-                .catch(err => {
-                    syncStatus.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest";
-                    syncDot.className = "w-2 h-2 rounded-full bg-rose-500";
-                    syncText.innerText = "Error";
-                    console.error(err);
-                });
-        }
-
-        // Jalankan pemuatan data saat halaman dibuka
-        window.onload = loadCurrentConfig;
 
         // Tangani pengiriman form (Pembaruan Parsial / Kolom yang diisi saja)
         form.addEventListener('submit', function(e) {
@@ -219,7 +224,7 @@
                     statusMessage.classList.remove('hidden');
                 })
                 .catch(err => {
-                    statusMessage.innerText = 'Gagal terhubung ke Google Sheet. Periksa kembali deployment script Anda.';
+                    statusMessage.innerText = 'Gagal menyimpan data ke Google Sheet. Periksa kembali koneksi internet Anda.';
                     statusMessage.className = 'mt-4 text-center text-xs text-rose-700 bg-rose-50 border border-rose-200/50 p-3 rounded-2xl font-bold';
                     statusMessage.classList.remove('hidden');
                     console.error(err);
