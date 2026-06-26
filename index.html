@@ -298,18 +298,29 @@
         let localLogDatabase = [];
         let filteredLogDatabase = [];
 
-       $(document).ready(function() {
-    const hariIni = new Date().toISOString().split('T')[0];
-    $('#filterTanggal').val(hariIni);
+       $(document).ready(function () {
+
+    const hariIni = new Date().toISOString().split("T")[0];
+
+    $("#filterTanggalAwal").val(hariIni);
+    $("#filterTanggalAkhir").val(hariIni);
+
     fetchLogData();
 
-    $('#searchKeyword, #filterStatus, #filterKetWaktu').on('input change', function() {
+    $("#searchKeyword, #filterStatus, #filterKetWaktu")
+        .on("input change", function () {
+
         applyLocalFilters();
+
     });
 
-    $('#filterTanggal').on('change', function() {
+    $("#filterTanggalAwal,#filterTanggalAkhir")
+        .on("change", function () {
+
         fetchLogData();
+
     });
+
 });
 
         function fetchJSONP(params) {
