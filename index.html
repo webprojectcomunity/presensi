@@ -496,18 +496,10 @@ function renderDataCards(dataList, formatTanggalDisplay) {
     }
 
     dataList.forEach((item, index) => {
-        // --- PROSES TANGGAL YANG DIPERBAIKI ---
-        // 1. Pecah string "DD/MM/YYYY" menjadi [DD, MM, YYYY]
+        // --- PROSES TANGGAL ---
         const parts = item.tanggal.split('/'); 
-        
-        // 2. Buat objek Date (Format: YYYY, MM-1, DD)
         const dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
-        
-        // 3. Dapatkan hari (0 = Minggu, 1 = Senin, ..., 5 = Jumat, 6 = Sabtu)
         const dayOfWeek = dateObj.getDay(); 
-        
-        console.log("Tanggal:", item.tanggal, "Hari (0-6):", dayOfWeek);
-        // --------------------------------------
 
         const statusAbsen = item.keterangan; 
         const styleStatusBadge = statusAbsen === 'MASUK' 
@@ -515,10 +507,10 @@ function renderDataCards(dataList, formatTanggalDisplay) {
             : 'bg-blue-50 text-blue-600 border border-blue-100';
 
         const dataAbsenObj = {
-            tanggal: item.tanggal, // Tetap gunakan string asal untuk keperluan lain
+            tanggal: item.tanggal,
             absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
             absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
-            dayOfWeek: dayOfWeek // Menyertakan info hari ke objek
+            dayOfWeek: dayOfWeek
         };
 
         const statusBadgeHtml = getStatusBadge(dataAbsenObj);
@@ -549,10 +541,8 @@ function renderDataCards(dataList, formatTanggalDisplay) {
                 </td>
             </tr>
         `);
-    });
-}
 
-        // Render kartu ke Mobile List Container
+        // Render kartu ke Mobile List Container (SEKARANG SUDAH DI DALAM FOREACH)
         containerMobile.append(`
             <div class="block md:hidden p-4 space-y-3 hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
                 <div class="flex items-center justify-between">
@@ -567,7 +557,8 @@ function renderDataCards(dataList, formatTanggalDisplay) {
                 </div>
             </div>
         `);
-    });
+    }); // <--- PENUTUP FOREACH
+} // <--- PENUTUP FUNGSI
 
         
         function renderData(dataList) {
