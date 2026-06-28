@@ -463,6 +463,21 @@ function getStatusBadge(dataAbsen) {
     // 4. Hadir Lengkap
     return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Hadir Lengkap</span>`;
 }
+
+        function tentukanStatus(dataAbsenHariIni, tanggalPengecekan) {
+    // 1. Cek Hari Libur
+    let hari = new Date(tanggalPengecekan).getDay();
+    if (hari === 0 || hari === 6) {
+        return "Libur"; 
+    }
+
+    // 2. Jika tidak libur, cek apakah data absen ada
+    if (!dataAbsenHariIni || dataAbsenHariIni.length === 0) {
+        return "Tidak Absen"; // Ini baru benar-benar Tidak Absen
+    }
+    
+    return "Sudah Absen";
+}
         
         function renderDataCards(dataList, formatTanggalDisplay) {
             const containerTable = $('#logTableBody').empty();
