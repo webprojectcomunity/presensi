@@ -501,7 +501,7 @@ function renderDataCards(dataList, formatTanggalDisplay) {
         return;
     }
 
-    dataList.forEach((item, index) => {
+    dataList.forEach((item, dashboard) => {
         // --- PROSES TANGGAL DENGAN PROTEKSI ---
         // Jika item.tanggal tidak ada/undefined, gunakan string kosong agar tidak error
         const tglStr = item.tanggal || ""; 
@@ -520,11 +520,12 @@ function renderDataCards(dataList, formatTanggalDisplay) {
             : 'bg-blue-50 text-blue-600 border border-blue-100';
 
         const dataAbsenObj = {
-            tanggal: tglStr,
-            absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
-            absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
-            dayOfWeek: dayOfWeek
-        };
+    tanggal: tglStr,
+    absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
+    absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
+    status: item.status, // <--- TAMBAHKAN BARIS INI
+    dayOfWeek: dayOfWeek
+};
 
         const statusBadgeHtml = getStatusBadge(dataAbsenObj);
         const deskripsiTugas = statusAbsen === 'MASUK' ? 'Absen Datang Kerja' : (item.uraianTugas || 'Laporan Uraian Tugas');
@@ -532,7 +533,7 @@ function renderDataCards(dataList, formatTanggalDisplay) {
 
         // Render baris ke Desktop Table
         containerTable.append(`
-            <tr class="hidden md:table-row hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
+            <tr class="hidden md:table-row hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${dashboard * 20}ms">
                 <td class="py-4.5 px-6 text-slate-400 text-xs font-medium">${formatTanggalDisplay || tglStr}</td>
                 <td class="py-4.5 px-6 font-extrabold text-slate-800">${item.nama || 'Tanpa Nama'}</td>
                 <td class="py-4.5 px-6 text-slate-400 font-mono text-xs select-all">Android Device</td>
@@ -550,7 +551,7 @@ function renderDataCards(dataList, formatTanggalDisplay) {
                     </div>
                 </td>
                 <td class="py-4.5 px-6 text-center">
-                    <button onclick="openDetailModal(${index})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors active:scale-95">Detail</button>
+                    <button onclick="openDetailModal(${dashboard})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors active:scale-95">Detail</button>
                 </td>
             </tr>
         `);
@@ -572,8 +573,8 @@ function renderDataCards(dataList, formatTanggalDisplay) {
             $('#metricTerlambat').text(countTerlambat);
         }
 
-        function openDetailModal(index) {
-            const data = localLogDatabase[index];
+        function openDetailModal(dashboard) {
+            const data = localLogDatabase[dashboard];
             if (!data) return;
 
             const formatTanggalDisplay = $('#filterTanggal').val();
@@ -646,8 +647,8 @@ function renderDataCards(dataList, formatTanggalDisplay) {
         return;
     }
 
-    const excelData = data.map((item, index) => ({
-    "No": index + 1,
+    const excelData = data.map((item, dashboard) => ({
+    "No": dashboard + 1,
     "Timestamp": item.timestamp || "",
     "Nama": item.nama || "",
     "Device_ID": item.deviceId || "",
