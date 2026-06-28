@@ -427,35 +427,40 @@
             $('#logTableBody').html(html);
         }
 //FUNGSI TAMBAHAN WAKTU KETERLAMBTAN
-function getStatusBadge(status) {
-    if (!status) return '';
+function getStatusBadge(dataAbsen) {
+    // Memastikan data input ada
+    const absenPagi = dataAbsen.absenPagi ? dataAbsen.absenPagi.trim() : "";
+    const absenPulang = dataAbsen.absenPulang ? dataAbsen.absenPulang.trim() : "";
     
-    // Konfigurasi style dasar
+    const adaPagi = absenPagi !== "";
+    const adaPulang = absenPulang !== "";
+    
     const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
     
-    // Cek masing-masing kondisi
-    const isTerlambat = status.toLowerCase().includes('terlambat');
-    const isTidakDiLokasi = status.toLowerCase().includes('lokasi');
-    
-    // Jika mengandung keduanya
-    if (isTerlambat && isTidakDiLokasi) {
-        return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Tidak di lokasi (Terlambat)</span>`;
+    // 1. Kondisi Tidak Sama Sekali Absen
+    if (!adaPagi && !adaPulang) {
+        return `<span class="${baseClass} bg-slate-100 text-slate-500 border-slate-200">Tidak Absen</span>`;
     }
     
-    // Jika hanya Terlambat
-    if (isTerlambat) {
-        return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Terlambat</span>`;
+    // 2. Kondisi Hanya Absen Pagi (Pulang tidak ada)
+    if (adaPagi && !adaPulang) {
+        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Hanya Absen Pagi</span>`;
     }
     
-    // Jika hanya tidak di lokasi
-    if (isTidakDiLokasi) {
-        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen tidak di lokasi</span>`;
+    // 3. Kondisi Hanya Absen Pulang (Pagi tidak ada)
+    if (!adaPagi && adaPulang) {
+        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Hanya Absen Pulang</span>`;
     }
     
-    // Default (Tepat Waktu)
-    return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Tepat Waktu</span>`;
+    // 4. Kondisi Tambahan: Catatan Terlambat / Lokasi (Jika hadir lengkap)
+    const statusCatatan = dataAbsen.catatan ? dataAbsen.catatan.toLowerCase() : "";
+    if (statusCatatan.includes('terlambat') || statusCatatan.includes('lokasi')) {
+        return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Hadir (Catatan)</span>`;
+    }
+    
+    // 5. Default: Hadir Lengkap
+    return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Hadir Lengkap</span>`;
 }
-
         
         function renderDataCards(dataList, formatTanggalDisplay) {
             const containerTable = $('#logTableBody').empty();
