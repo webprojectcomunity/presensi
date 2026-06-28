@@ -440,36 +440,35 @@
  * @returns {String} - HTML Badge status
  */
 function getStatusBadge(dataAbsen) {
-    // Gunakan fungsi bantu untuk memastikan tanggal diproses dengan benar
-    // Jika dataAbsen.tanggal berupa string "YYYY-MM-DD", tambahkan jam agar tidak geser ke hari sebelumnya
     const tanggalInput = new Date(dataAbsen.tanggal + "T00:00:00"); 
     const hari = tanggalInput.getDay(); 
     
-    // 0 = Minggu, 6 = Sabtu
-    // Hari Jumat seharusnya adalah 5. 
     if (hari === 0 || hari === 6) {
         return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-sky-50 text-sky-600 border-sky-200">Libur Akhir Pekan</span>`;
     }
 
+    // 1. CEK STATUS PELANGGARAN TERLEBIH DAHULU (PENTING)
+    const statusRaw = dataAbsen.status ? dataAbsen.status.toLowerCase() : "";
+    if (statusRaw.includes("tidak di lokasi") || statusRaw.includes("tidak dilokasi")) {
+        return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-rose-50 text-rose-600 border-rose-200">Diluar Lokasi</span>`;
+    }
+
+    // 2. Logika absen lengkap/tidak
     const absenPagi = dataAbsen.absenPagi ? dataAbsen.absenPagi.trim() : "";
     const absenPulang = dataAbsen.absenPulang ? dataAbsen.absenPulang.trim() : "";
     
     const adaPagi = absenPagi !== "";
     const adaPulang = absenPulang !== "";
-    
     const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
     
     if (!adaPagi && !adaPulang) {
         return `<span class="${baseClass} bg-slate-100 text-slate-500 border-slate-200">Tidak Absen</span>`;
     }
-    
     if ((adaPagi && !adaPulang) || (!adaPagi && adaPulang)) {
         return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen Tidak Lengkap</span>`;
-    }
-    
+    }    
     return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Hadir Lengkap</span>`;
 }
-
         
         function tentukanStatus(dataAbsenHariIni, tanggalPengecekan) {
     // 1. Cek Hari Libur
