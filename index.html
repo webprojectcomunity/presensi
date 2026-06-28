@@ -496,18 +496,25 @@ function renderDataCards(dataList, formatTanggalDisplay) {
     }
 
     dataList.forEach((item, index) => {
-        // --- PROSES TANGGAL ---
-        const parts = item.tanggal.split('/'); 
-        const dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+        // --- PROSES TANGGAL DENGAN PROTEKSI ---
+        // Jika item.tanggal tidak ada/undefined, gunakan string kosong agar tidak error
+        const tglStr = item.tanggal || ""; 
+        const parts = tglStr.split('/'); 
+        
+        // Cek apakah hasil split valid (harus ada 3 bagian)
+        const dateObj = (parts.length === 3) 
+            ? new Date(parts[2], parts[1] - 1, parts[0]) 
+            : new Date(); // Fallback ke tanggal hari ini jika format salah
+            
         const dayOfWeek = dateObj.getDay(); 
 
-        const statusAbsen = item.keterangan; 
+        const statusAbsen = item.keterangan || "-"; 
         const styleStatusBadge = statusAbsen === 'MASUK' 
             ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
             : 'bg-blue-50 text-blue-600 border border-blue-100';
 
         const dataAbsenObj = {
-            tanggal: item.tanggal,
+            tanggal: tglStr,
             absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
             absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
             dayOfWeek: dayOfWeek
@@ -520,8 +527,8 @@ function renderDataCards(dataList, formatTanggalDisplay) {
         // Render baris ke Desktop Table
         containerTable.append(`
             <tr class="hidden md:table-row hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
-                <td class="py-4.5 px-6 text-slate-400 text-xs font-medium">${formatTanggalDisplay}</td>
-                <td class="py-4.5 px-6 font-extrabold text-slate-800">${item.nama}</td>
+                <td class="py-4.5 px-6 text-slate-400 text-xs font-medium">${formatTanggalDisplay || tglStr}</td>
+                <td class="py-4.5 px-6 font-extrabold text-slate-800">${item.nama || 'Tanpa Nama'}</td>
                 <td class="py-4.5 px-6 text-slate-400 font-mono text-xs select-all">Android Device</td>
                 <td class="py-4.5 px-6">
                     <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">
@@ -541,25 +548,8 @@ function renderDataCards(dataList, formatTanggalDisplay) {
                 </td>
             </tr>
         `);
-
-        // Render kartu ke Mobile List Container (SEKARANG SUDAH DI DALAM FOREACH)
-        containerMobile.append(`
-            <div class="block md:hidden p-4 space-y-3 hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="text-sm font-extrabold text-slate-800">${item.nama}</h4>
-                        <p class="text-[10px] text-slate-400 font-medium mt-0.5">${formatTanggalDisplay} • ${item.waktu || '-'}</p>
-                    </div>
-                    <div class="flex flex-col items-end gap-1.5">
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">${statusAbsen}</span>
-                        ${statusBadgeHtml}
-                    </div>
-                </div>
-            </div>
-        `);
-    }); // <--- PENUTUP FOREACH
-} // <--- PENUTUP FUNGSI
-
+    });
+}
         
         function renderData(dataList) {
             const formatTanggalDisplay = $('#filterTanggal').val();
