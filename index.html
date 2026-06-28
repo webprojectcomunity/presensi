@@ -298,10 +298,17 @@
         let localLogDatabase = [];
         let filteredLogDatabase = [];
 
-        $(document).ready(function() {
-            const hariIni = new Date().toISOString().split('T')[0];
-            $('#filterTanggal').val(hariIni);
-            fetchLogData();
+       $(document).ready(function() {
+    // Gunakan fungsi untuk mendapatkan tanggal lokal (WIB) yang akurat
+    const sekarang = new Date();
+    // Menambahkan offset WIB (GMT+7)
+    const wib = new Date(sekarang.getTime() + (7 * 60 * 60 * 1000));
+    const hariIniWIB = wib.toISOString().split('T')[0];
+    
+    $('#filterTanggal').val(hariIniWIB);
+    
+    // Panggil fetch setelah input terisi
+    fetchLogData();
             $('#searchKeyword, #filterStatus, #filterKetWaktu').on('input change', function() {
                 applyLocalFilters();
             });
