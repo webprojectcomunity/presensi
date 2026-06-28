@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Responsif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex h-screen overflow-hidden">
+
+    <button id="menu-btn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-800 text-white rounded">
+        ☰
+    </button>
+
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-slate-800 text-white transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-40">
+        <div class="p-6 text-xl font-bold border-b border-slate-700">Manajemen Admin</div>
+        <nav class="mt-6">
+            <button onclick="loadContent('dashboard.html')" class="w-full text-left py-3 px-6 hover:bg-slate-700 transition">Dashboard</button>
+            <button onclick="loadContent('admin_fix_final.html')" class="w-full text-left py-3 px-6 hover:bg-slate-700 transition">Setting Waktu & Radius</button>
+        </nav>
+    </aside>
+
+    <div id="overlay" class="fixed inset-0 bg-black opacity-50 z-30 hidden md:hidden"></div>
+
+    <main class="flex-1 overflow-y-auto p-8 pt-16 md:pt-8">
+        <div id="content-area" class="bg-white rounded-xl shadow-lg p-8 min-h-[500px]">
+            <h1 class="text-2xl font-bold">Selamat Datang</h1>
+            <p>Silakan pilih menu dari navigasi.</p>
+        </div>
+    </main>
+
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const menuBtn = document.getElementById('menu-btn');
+
+        // Fungsi toggle untuk mobile
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        menuBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+
+        // Fungsi load konten
+        function loadContent(url) {
+            const contentArea = document.getElementById('content-area');
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    contentArea.innerHTML = html;
+                    // Tutup sidebar otomatis di mobile setelah klik menu
+                    if (window.innerWidth < 768) toggleSidebar();
+                });
+        }
+    </script>
+</body>
+</html>
