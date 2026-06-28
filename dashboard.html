@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>Preview Log Absensi KPU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F8FAFC;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        
+        /* CSS Loader */
+        .loader {
+            border: 3px solid #E2E8F0;
+            border-top: 3px solid #2563EB;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pb-12">
+
+    <!-- Header Panel (Sangat Responsif) -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+            <div class="text-center md:text-left">
+                <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100">DATABASE ACTIVE</span>
+                    <span id="syncIndicator" class="flex items-center gap-1.5 text-[10px] font-bold text-amber-500">
+                        <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                        <span id="syncText">MENGHUBUNGKAN...</span>
+                    </span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight mt-2 md:mt-1">Log Absensi Pegawai</h1>
+                <p class="text-xs text-slate-500 font-medium">Struktur 10 Kolom Terintegrasi Android Biometric & Geolocation</p>
+            </div>
+            
+            <!-- Filter Tanggal & Tombol Refresh -->
+            <div class="flex flex-row items-center gap-2 w-full md:w-auto">
+
+    <input type="date"
+           id="filterTanggal"
+           class="flex-1 md:flex-initial bg-slate-50 border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 py-2.5 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+    <button onclick="exportExcel()"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs shadow-lg shadow-emerald-100 flex items-center gap-2">
+
+        Export Excel
+    </button>
+
+    <button onclick="fetchLogData()"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs shadow-lg shadow-blue-100 flex items-center gap-2">
+
+        Refresh
+    </button>
+
+</div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+
+        <!-- Metrics Dashboard -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+            <!-- Metric 1: Total Log -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Aktivitas</p>
+                    <h3 id="metricTotalLog" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">0</h3>
+                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Log presensi terkirim hari ini</p>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-2xl text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                </div>
+            </div>
+
+            <!-- Metric 2: Masuk Kerja -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Absen Masuk</p>
+                    <h3 id="metricMasuk" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Pegawai berhasil check-in</p>
+                </div>
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                </div>
+            </div>
+
+            <!-- Metric 3: Terlambat / Di luar Lokasi -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengecualian Lokasi / Waktu</p>
+                    <h3 id="metricTerlambat" class="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1">0</h3>
+                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Terlambat atau tidak di lokasi</p>
+                </div>
+                <div class="p-3 bg-rose-50 text-rose-600 rounded-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+            </div>
+
+            <!-- Metric 4: Proteksi Keamanan -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sistem Geofencing v2</p>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold text-blue-600 mt-1">500 Meter</h3>
+                    <p class="text-[11px] text-slate-500 font-semibold mt-1">Kunci radius & Anti-Fake GPS</p>
+                </div>
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filter and Search Controller -->
+        <section class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4 animate-fade-in">
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Pusat Filter Data</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Search bar -->
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <input type="text" id="searchKeyword" placeholder="Cari nama pegawai..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-700 font-semibold placeholder:text-slate-400 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Filter Status Absen -->
+                <div>
+                    <select id="filterStatus" class="w-full bg-slate-50 border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="ALL">Semua Aktivitas (MASUK / PULANG)</option>
+                        <option value="MASUK">Hanya Absen MASUK</option>
+                        <option value="PULANG">Hanya Absen PULANG</option>
+                    </select>
+                </div>
+
+                <!-- Filter Keterangan Waktu -->
+                <div>
+                    <select id="filterKetWaktu" class="w-full bg-slate-50 border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="ALL">Semua Keterangan Waktu</option>
+                        <option value="Tepat Waktu">Tepat Waktu</option>
+                        <option value="Terlambat">Terlambat</option>
+                        <option value="Absen tidak di lokasi">Tidak di Lokasi Kantor (Diluar Radius)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Log Database Table Panel (Responsive Wrapper) -->
+        <section class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden animate-fade-in">
+            <div class="px-5 sm:px-6 py-5 border-b border-slate-100 flex flex-row items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-sm sm:text-md font-bold text-slate-800">Tabel Informasi Kehadiran</h3>
+                    <p class="text-[11px] sm:text-xs text-slate-400 mt-1">Daftar log presensi yang tersimpan di Google Sheets</p>
+                </div>
+                <div>
+                    <span id="filteredLogCount" class="text-[10px] sm:text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full whitespace-nowrap">0 Terfilter</span>
+                </div>
+            </div>
+
+            <!-- DESKTOP VIEW: Tabel Tradisional (Hanya tampil di MD ke atas) -->
+            <div class="hidden md:block overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <th class="py-4 px-6">Timestamp / Waktu Server</th>
+                            <th class="py-4 px-6">Pegawai</th>
+                            <th class="py-4 px-6">Device ID / Hardware</th>
+                            <th class="py-4 px-6">Status Log</th>
+                            <th class="py-4 px-6">Uraian Tugas</th>
+                            <th class="py-4 px-6">Output Kegiatan</th>
+                            <th class="py-4 px-6">Jam Presensi</th>
+                            <th class="py-4 px-6 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody" class="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+                        <!-- Data diisi oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- MOBILE VIEW: Card List (Hanya tampil di bawah breakpoint md) -->
+            <div id="logMobileContainer" class="block md:hidden divide-y divide-slate-100">
+                <!-- Data list akan diisi secara dinamis di sini saat layar kecil -->
+                <div class="py-20 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Menarik data log presensi dari cloud...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Detail Presensi -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl border border-slate-100 animate-fade-in m-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-start border-b border-slate-100 pb-5">
+                <div>
+                    <span id="detailBadgeStatus" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"></span>
+                    <h3 id="detailPegawai" class="text-lg sm:text-xl font-black text-slate-800 mt-2">Nama Pegawai</h3>
+                    <p id="detailTimestamp" class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Tanggal Absen</p>
+                </div>
+                <button onclick="closeDetailModal()" class="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="space-y-5 mt-6">
+                <!-- Info Section -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">ID Pegawai</p>
+                        <p id="detailIdPegawai" class="text-xs sm:text-sm font-extrabold text-slate-700 mt-1">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Waktu Real-Time</p>
+                        <p id="detailWaktu" class="text-xs sm:text-sm font-extrabold text-blue-600 mt-1">-</p>
+                    </div>
+                </div>
+
+                <!-- Laporan Tugas Seksi -->
+                <div class="space-y-3">
+                    <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-100/50">
+                        <h4 class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">Laporan Uraian Tugas</h4>
+                        <p id="detailUraianTugas" class="text-xs font-semibold text-slate-600 mt-2 leading-relaxed bg-white p-3 rounded-xl border border-slate-100/80">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-100/50">
+                        <h4 class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">Output Kegiatan</h4>
+                        <p id="detailOutput" class="text-xs font-semibold text-slate-600 mt-2 leading-relaxed bg-white p-3 rounded-xl border border-slate-100/80">-</p>
+                    </div>
+                </div>
+
+                <!-- Lokasi GPS Section -->
+                <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-100/50 space-y-4">
+                    <div>
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pelacakan Koordinat GPS</h4>
+                        <p id="detailKoordinat" class="text-xs font-extrabold text-slate-700 mt-1">Latitude: 0.000000 | Longitude: 0.000000</p>
+                        <span id="detailStatusGeofence" class="mt-2 inline-block px-2.5 py-1 rounded-full text-[9px] font-bold"></span>
+                    </div>
+                    <!-- Direct Link Map -->
+                    <a id="detailMapLink" href="#" target="_blank" class="w-full bg-blue-50 text-blue-600 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border border-blue-100 hover:bg-blue-100/50 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        Buka di Google Maps
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Business Logic Script -->
+    <script>
+        const BASE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFi2rasPQracQJ9WMU3805SjnmfyNxtMYIli0rzLuWI-Yfx2m3Q_aXLGLgTJ7fh41U/exec";
+        
+        let localLogDatabase = [];
+        let filteredLogDatabase = [];
+
+       $(document).ready(function() {
+    // Gunakan fungsi untuk mendapatkan tanggal lokal (WIB) yang akurat
+    const sekarang = new Date();
+    // Menambahkan offset WIB (GMT+7)
+    const wib = new Date(sekarang.getTime() + (7 * 60 * 60 * 1000));
+    const hariIniWIB = wib.toISOString().split('T')[0];
+    
+    $('#filterTanggal').val(hariIniWIB);
+    
+    // Panggil fetch setelah input terisi
+    fetchLogData();
+            $('#searchKeyword, #filterStatus, #filterKetWaktu').on('input change', function() {
+                applyLocalFilters();
+            });
+
+            $('#filterTanggal').on('change', function() {
+                fetchLogData();
+            });
+        });
+
+        function fetchJSONP(params) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'g_sheet_' + Math.floor(Math.random() * 1000000);
+                const url = new URL(BASE_SCRIPT_URL);
+                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+                url.searchParams.append('callback', callbackName);
+
+                const timeout = setTimeout(() => {
+                    reject(new Error("Koneksi server Google Apps Script terputus (Timeout)"));
+                }, 15000);
+
+                window[callbackName] = function(data) {
+                    clearTimeout(timeout);
+                    delete window[callbackName];
+                    document.getElementById(callbackName)?.remove();
+                    resolve(data);
+                };
+
+                const script = document.createElement('script');
+                script.id = callbackName;
+                script.src = url.toString();
+                script.onerror = () => {
+                    delete window[callbackName];
+                    reject(new Error("CORS Policy Memblokir Akses API"));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        function fetchLogData() {
+            const tglSelected = $('#filterTanggal').val();
+            updateIndicatorStatus(false, "Menghubungkan...");
+            
+            $('#logTableBody').html(`<tr><td colspan="8" class="py-10">${loaderHtml()}</td></tr>`);
+            $('#logMobileContainer').html(loaderHtml());
+
+            fetchJSONP({ request: 'getdata', tanggal: tglSelected })
+                .then(data => {
+                    updateIndicatorStatus(true, "Terhubung");
+                    if (data && Array.isArray(data)) {
+                        localLogDatabase = data;
+                        applyLocalFilters();
+                    } else {
+                        localLogDatabase = [];
+                        renderData([]);
+                        updateMetrics([]);
+                    }
+                })
+                .catch(err => {
+                    updateIndicatorStatus(false, "Terputus");
+                    console.error(err);
+                    const errorHtml = `
+                        <div class="py-12 text-center text-rose-500 font-extrabold text-xs uppercase tracking-wider">
+                            Gagal memuat data dari Cloud.<br>
+                            <span class="text-[10px] font-medium text-slate-400 normal-case block mt-2">Pastikan Google Apps Script dideploy dengan benar dengan akses 'Anyone'.</span>
+                        </div>
+                    `;
+                    $('#logTableBody').html(`<tr><td colspan="8">${errorHtml}</td></tr>`);
+                    $('#logMobileContainer').html(errorHtml);
+                });
+        }
+
+        function loaderHtml() {
+            return `
+                <div class="flex flex-col items-center justify-center gap-3 py-12">
+                    <div class="loader"></div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Menghubungkan database Cloud...</span>
+                </div>
+            `;
+        }
+
+        function applyLocalFilters() {
+    const keyword = $('#searchKeyword').val().toLowerCase().trim();
+    const statusFilter = $('#filterStatus').val();
+    const ketWaktuFilter = $('#filterKetWaktu').val();
+
+    const filteredData = localLogDatabase.filter(item => {
+
+        const matchName =
+            item.nama &&
+            item.nama.toLowerCase().includes(keyword);
+
+        const matchStatusMsg =
+            item.status &&
+            item.status.toLowerCase().includes(keyword);
+
+        const matchKeyword = matchName || matchStatusMsg;
+
+        const matchStatus =
+            (statusFilter === 'ALL') ||
+            (item.keterangan === statusFilter);
+
+        let matchKetWaktu = false;
+
+        if (ketWaktuFilter === 'ALL') {
+            matchKetWaktu = true;
+        } else if (item.status) {
+            matchKetWaktu = item.status.includes(ketWaktuFilter);
+        }
+
+        return matchKeyword &&
+               matchStatus &&
+               matchKetWaktu;
+    });
+
+    // Simpan hasil filter untuk proses export
+    filteredLogDatabase = filteredData;
+
+    renderData(filteredData);
+    updateMetrics(filteredData);
+}
+
+        function renderTablePlaceholder(html) {
+            $('#logTableBody').html(html);
+        }
+//FUNGSI TAMBAHAN WAKTU KETERLAMBTAN
+/**
+ * Fungsi untuk menentukan status absensi dengan pengecekan hari libur akhir pekan.
+ * @param {Object} dataAbsen - Data absensi (absenPagi, absenPulang, tanggal)
+ * @returns {String} - HTML Badge status
+ */
+function getStatusBadge(dataAbsen) {
+    // Gunakan fungsi bantu untuk memastikan tanggal diproses dengan benar
+    // Jika dataAbsen.tanggal berupa string "YYYY-MM-DD", tambahkan jam agar tidak geser ke hari sebelumnya
+    const tanggalInput = new Date(dataAbsen.tanggal + "T00:00:00"); 
+    const hari = tanggalInput.getDay(); 
+    
+    // 0 = Minggu, 6 = Sabtu
+    // Hari Jumat seharusnya adalah 5. 
+    if (hari === 0 || hari === 6) {
+        return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-sky-50 text-sky-600 border-sky-200">Libur Akhir Pekan</span>`;
+    }
+
+    const absenPagi = dataAbsen.absenPagi ? dataAbsen.absenPagi.trim() : "";
+    const absenPulang = dataAbsen.absenPulang ? dataAbsen.absenPulang.trim() : "";
+    
+    const adaPagi = absenPagi !== "";
+    const adaPulang = absenPulang !== "";
+    
+    const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
+    
+    if (!adaPagi && !adaPulang) {
+        return `<span class="${baseClass} bg-slate-100 text-slate-500 border-slate-200">Tidak Absen</span>`;
+    }
+    
+    if ((adaPagi && !adaPulang) || (!adaPagi && adaPulang)) {
+        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen Tidak Lengkap</span>`;
+    }
+    
+    return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Hadir Lengkap</span>`;
+}
+
+        
+        function tentukanStatus(dataAbsenHariIni, tanggalPengecekan) {
+    // 1. Cek Hari Libur
+    let hari = new Date(tanggalPengecekan).getDay();
+    if (hari === 0 || hari === 6) {
+        return "Libur"; 
+    }
+
+    // 2. Jika tidak libur, cek apakah data absen ada
+    if (!dataAbsenHariIni || dataAbsenHariIni.length === 0) {
+        return "Tidak Absen"; // Ini baru benar-benar Tidak Absen
+    }
+    
+    return "Sudah Absen";
+}
+        
+      /**
+ * Fungsi utama untuk merender tabel dan daftar mobile.
+ * Memastikan data yang dikirim ke getStatusBadge adalah objek yang benar.
+ */
+function renderDataCards(dataList, formatTanggalDisplay) {
+    const containerTable = $('#logTableBody').empty();
+    const containerMobile = $('#logMobileContainer').empty();
+    $('#filteredLogCount').text(`${dataList.length} Data Ditemukan`);
+
+    if (dataList.length === 0) {
+        const emptyHtml = `<div class="py-16 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Tidak ada aktivitas log absensi yang cocok dengan filter.</div>`;
+        containerTable.html(`<tr><td colspan="8">${emptyHtml}</td></tr>`);
+        containerMobile.html(emptyHtml);
+        return;
+    }
+
+    dataList.forEach((item, index) => {
+        // --- PROSES TANGGAL DENGAN PROTEKSI ---
+        // Jika item.tanggal tidak ada/undefined, gunakan string kosong agar tidak error
+        const tglStr = item.tanggal || ""; 
+        const parts = tglStr.split('/'); 
+        
+        // Cek apakah hasil split valid (harus ada 3 bagian)
+        const dateObj = (parts.length === 3) 
+            ? new Date(parts[2], parts[1] - 1, parts[0]) 
+            : new Date(); // Fallback ke tanggal hari ini jika format salah
+            
+        const dayOfWeek = dateObj.getDay(); 
+
+        const statusAbsen = item.keterangan || "-"; 
+        const styleStatusBadge = statusAbsen === 'MASUK' 
+            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+            : 'bg-blue-50 text-blue-600 border border-blue-100';
+
+        const dataAbsenObj = {
+            tanggal: tglStr,
+            absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
+            absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
+            dayOfWeek: dayOfWeek
+        };
+
+        const statusBadgeHtml = getStatusBadge(dataAbsenObj);
+        const deskripsiTugas = statusAbsen === 'MASUK' ? 'Absen Datang Kerja' : (item.uraianTugas || 'Laporan Uraian Tugas');
+        const outputKegiatan = statusAbsen === 'MASUK' ? 'Hadir' : (item.outputKegiatan || 'Selesai');
+
+        // Render baris ke Desktop Table
+        containerTable.append(`
+            <tr class="hidden md:table-row hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
+                <td class="py-4.5 px-6 text-slate-400 text-xs font-medium">${formatTanggalDisplay || tglStr}</td>
+                <td class="py-4.5 px-6 font-extrabold text-slate-800">${item.nama || 'Tanpa Nama'}</td>
+                <td class="py-4.5 px-6 text-slate-400 font-mono text-xs select-all">Android Device</td>
+                <td class="py-4.5 px-6">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">
+                        ${statusAbsen}
+                    </span>
+                </td>
+                <td class="py-4.5 px-6 text-slate-500 font-medium truncate max-w-[150px]" title="${deskripsiTugas}">${deskripsiTugas}</td>
+                <td class="py-4.5 px-6 text-slate-500 font-medium truncate max-w-[150px]" title="${outputKegiatan}">${outputKegiatan}</td>
+                <td class="py-4.5 px-6">
+                    <div class="flex flex-col">
+                        <span class="font-extrabold text-slate-800">${item.waktu || '-'}</span>
+                        ${statusBadgeHtml}
+                    </div>
+                </td>
+                <td class="py-4.5 px-6 text-center">
+                    <button onclick="openDetailModal(${index})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors active:scale-95">Detail</button>
+                </td>
+            </tr>
+        `);
+    });
+}
+        
+        function renderData(dataList) {
+            const formatTanggalDisplay = $('#filterTanggal').val();
+            renderDataCards(dataList, formatTanggalDisplay);
+        }
+
+        function updateMetrics(dataList) {
+            $('#metricTotalLog').text(dataList.length);
+            
+            const countMasuk = dataList.filter(item => item.keterangan === 'MASUK').length;
+            $('#metricMasuk').text(countMasuk);
+
+            const countTerlambat = dataList.filter(item => item.status && (item.status.includes('Terlambat') || item.status.includes('lokasi') || item.status.includes('cepat'))).length;
+            $('#metricTerlambat').text(countTerlambat);
+        }
+
+        function openDetailModal(index) {
+            const data = localLogDatabase[index];
+            if (!data) return;
+
+            const formatTanggalDisplay = $('#filterTanggal').val();
+            const labelKetWaktu = data.status ? data.status.split(' (')[0] : '-';
+            const statusAbsen = data.keterangan;
+
+            $('#detailPegawai').text(data.nama);
+            $('#detailTimestamp').text(`Waktu Laporan: ${formatTanggalDisplay}`);
+            $('#detailIdPegawai').text(`ID: Karyawan KPU`);
+            $('#detailWaktu').text(data.waktu || '-');
+
+            const badge = $('#detailBadgeStatus').text(statusAbsen).removeClass();
+            if (statusAbsen === 'MASUK') {
+                badge.addClass('px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100');
+            } else {
+                badge.addClass('px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100');
+            }
+
+            const deskripsiTugas = statusAbsen === 'MASUK' ? "Karyawan melakukan absen datang kerja (Check-in pagi hari)." : (data.uraianTugas || 'Laporan Uraian Tugas');
+            const outputKegiatan = statusAbsen === 'MASUK' ? "Kehadiran sukses terekam biometrik." : (data.outputKegiatan || 'Selesai');
+
+            $('#detailUraianTugas').text(deskripsiTugas);
+            $('#detailOutput').text(outputKegiatan);
+
+            // Validasi status geofence lokasi secara presisi di modal detail
+            const labelGeofence = $('#detailStatusGeofence').removeClass();
+            if (labelKetWaktu.includes('tidak di lokasi') || labelKetWaktu.includes('tidak dilokasi') || labelKetWaktu.includes('lokasi')) {
+                labelGeofence.text("DILUAR RADIUS KANTOR (PENGECUALIAN)").addClass("mt-2 inline-block px-2.5 py-1 rounded-full text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200");
+            } else {
+                labelGeofence.text("DI DALAM RADIUS AMAN KANTOR").addClass("mt-2 inline-block px-2.5 py-1 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100");
+            }
+
+            if (data.lat && data.lng && data.lat !== 0) {
+                $('#detailKoordinat').text(`Latitude: ${data.lat} | Longitude: ${data.lng}`);
+                $('#detailMapLink').removeClass('hidden').attr('href', `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lng}`);
+            } else {
+                $('#detailKoordinat').text("Koordinat tidak terekam (0.0000 | 0.0000)");
+                $('#detailMapLink').addClass('hidden');
+                labelGeofence.text("KOORDINAT GPS TIDAK VALID").addClass("mt-2 inline-block px-2.5 py-1 rounded-full text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-100");
+            }
+
+            $('#detailModal').css('display', 'flex');
+        }
+
+        function closeDetailModal() {
+            $('#detailModal').hide();
+        }
+
+        function updateIndicatorStatus(isOnline, text) {
+            const indicator = $('#syncIndicator');
+            $('#syncText').text(text.toUpperCase());
+            if (isOnline) {
+                indicator.removeClass('text-amber-500 text-rose-500').addClass('text-emerald-500');
+            } else if (text.includes("MENGHUBUNGKAN")) {
+                indicator.removeClass('text-emerald-500 text-rose-500').addClass('text-amber-500');
+            } else {
+                indicator.removeClass('text-emerald-500 text-amber-500').addClass('text-rose-500');
+            }
+        }
+
+
+        function exportExcel() {
+
+    const data = filteredLogDatabase.length
+        ? filteredLogDatabase
+        : localLogDatabase;
+
+    if (data.length === 0) {
+        alert("Tidak ada data yang akan diekspor.");
+        return;
+    }
+
+    const excelData = data.map((item, index) => ({
+    "No": index + 1,
+    "Timestamp": item.timestamp || "",
+    "Nama": item.nama || "",
+    "Device_ID": item.deviceId || "",
+    "Keterangan": item.keterangan || "",
+    "Uraian Tugas": item.uraianTugas || "",
+    "Output Kegiatan": item.outputKegiatan || "",
+    "Jam": item.waktu || "",
+    "Status": item.status || "",
+    "Latitude": item.lat || "",
+    "Longitude": item.lng || ""
+}));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Mengatur lebar kolom otomatis
+    worksheet["!cols"] = [
+        { wch: 5 },
+        { wch: 15 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 35 },
+        { wch: 45 },
+        { wch: 35 },
+        { wch: 15 },
+        { wch: 15 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Kehadiran"
+    );
+
+    XLSX.writeFile(
+        workbook,
+        `Data_Kehadiran_${$("#filterTanggal").val()}.xlsx`
+    );
+}
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</body>
+</html>
