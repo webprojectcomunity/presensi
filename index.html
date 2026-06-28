@@ -427,8 +427,21 @@
             $('#logTableBody').html(html);
         }
 //FUNGSI TAMBAHAN WAKTU KETERLAMBTAN
+/**
+ * Fungsi untuk menentukan status absensi dengan pengecekan hari libur akhir pekan.
+ * @param {Object} dataAbsen - Data absensi (absenPagi, absenPulang, tanggal)
+ * @returns {String} - HTML Badge status
+ */
 function getStatusBadge(dataAbsen) {
-    // Memastikan data input ada
+    const tanggalInput = new Date(dataAbsen.tanggal); // Pastikan format tanggal valid
+    const hari = tanggalInput.getDay(); // 0 = Minggu, 6 = Sabtu
+    
+    // 1. Cek Apakah Hari Libur (Sabtu atau Minggu)
+    if (hari === 0 || hari === 6) {
+        return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-sky-50 text-sky-600 border-sky-200">Libur Akhir Pekan</span>`;
+    }
+
+    // Pemrosesan Data Absen
     const absenPagi = dataAbsen.absenPagi ? dataAbsen.absenPagi.trim() : "";
     const absenPulang = dataAbsen.absenPulang ? dataAbsen.absenPulang.trim() : "";
     
@@ -437,28 +450,17 @@ function getStatusBadge(dataAbsen) {
     
     const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
     
-    // 1. Kondisi Tidak Sama Sekali Absen
+    // 2. Kondisi Tidak Sama Sekali Absen (Hari Kerja)
     if (!adaPagi && !adaPulang) {
         return `<span class="${baseClass} bg-slate-100 text-slate-500 border-slate-200">Tidak Absen</span>`;
     }
     
-    // 2. Kondisi Hanya Absen Pagi (Pulang tidak ada)
-    if (adaPagi && !adaPulang) {
-        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Hanya Absen Pagi</span>`;
+    // 3. Kondisi Hanya Absen Pagi/Pulang
+    if ((adaPagi && !adaPulang) || (!adaPagi && adaPulang)) {
+        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen Tidak Lengkap</span>`;
     }
     
-    // 3. Kondisi Hanya Absen Pulang (Pagi tidak ada)
-    if (!adaPagi && adaPulang) {
-        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Hanya Absen Pulang</span>`;
-    }
-    
-    // 4. Kondisi Tambahan: Catatan Terlambat / Lokasi (Jika hadir lengkap)
-    const statusCatatan = dataAbsen.catatan ? dataAbsen.catatan.toLowerCase() : "";
-    if (statusCatatan.includes('terlambat') || statusCatatan.includes('lokasi')) {
-        return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Hadir (Catatan)</span>`;
-    }
-    
-    // 5. Default: Hadir Lengkap
+    // 4. Hadir Lengkap
     return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Hadir Lengkap</span>`;
 }
         
