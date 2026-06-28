@@ -428,24 +428,33 @@
         }
 //FUNGSI TAMBAHAN WAKTU KETERLAMBTAN
 function getStatusBadge(status) {
-            if (!status) return '';
-            
-            // Konfigurasi style
-            const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
-            
-            // Logika Keterlambatan
-            if (status.toLowerCase().includes('terlambat')) {
-                return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Terlambat</span>`;
-            }
-            
-            // Logika Lokasi (Mencakup 'tidak di lokasi' atau 'tidak dilokasi')
-            if (status.toLowerCase().includes('lokasi')) {
-                return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen tidak di lokasi</span>`;
-            }
-            
-            // Default (Tepat Waktu)
-            return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Tepat Waktu</span>`;
-        }
+    if (!status) return '';
+    
+    // Konfigurasi style dasar
+    const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
+    
+    // Cek masing-masing kondisi
+    const isTerlambat = status.toLowerCase().includes('terlambat');
+    const isTidakDiLokasi = status.toLowerCase().includes('lokasi');
+    
+    // Jika mengandung keduanya
+    if (isTerlambat && isTidakDiLokasi) {
+        return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Tidak di lokasi (Terlambat)</span>`;
+    }
+    
+    // Jika hanya Terlambat
+    if (isTerlambat) {
+        return `<span class="${baseClass} bg-rose-50 text-rose-600 border-rose-200">Terlambat</span>`;
+    }
+    
+    // Jika hanya tidak di lokasi
+    if (isTidakDiLokasi) {
+        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen tidak di lokasi</span>`;
+    }
+    
+    // Default (Tepat Waktu)
+    return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Tepat Waktu</span>`;
+}
 
         
         function renderDataCards(dataList, formatTanggalDisplay) {
