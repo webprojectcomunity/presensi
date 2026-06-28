@@ -479,73 +479,84 @@ function getStatusBadge(dataAbsen) {
     return "Sudah Absen";
 }
         
-        function renderDataCards(dataList, formatTanggalDisplay) {
-            const containerTable = $('#logTableBody').empty();
-            const containerMobile = $('#logMobileContainer').empty();
-            $('#filteredLogCount').text(`${dataList.length} Data Ditemukan`);
+      /**
+ * Fungsi utama untuk merender tabel dan daftar mobile.
+ * Memastikan data yang dikirim ke getStatusBadge adalah objek yang benar.
+ */
+function renderDataCards(dataList, formatTanggalDisplay) {
+    const containerTable = $('#logTableBody').empty();
+    const containerMobile = $('#logMobileContainer').empty();
+    $('#filteredLogCount').text(`${dataList.length} Data Ditemukan`);
 
-            if (dataList.length === 0) {
-                const emptyHtml = `<div class="py-16 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Tidak ada aktivitas log absensi yang cocok dengan filter.</div>`;
-                containerTable.html(`<tr><td colspan="8">${emptyHtml}</td></tr>`);
-                containerMobile.html(emptyHtml);
-                return;
-            }
+    if (dataList.length === 0) {
+        const emptyHtml = `<div class="py-16 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Tidak ada aktivitas log absensi yang cocok dengan filter.</div>`;
+        containerTable.html(`<tr><td colspan="8">${emptyHtml}</td></tr>`);
+        containerMobile.html(emptyHtml);
+        return;
+    }
 
-            dataList.forEach((item, index) => {
-                const statusAbsen = item.keterangan; 
-                const styleStatusBadge = statusAbsen === 'MASUK' 
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                    : 'bg-blue-50 text-blue-600 border border-blue-100';
+    dataList.forEach((item, index) => {
+        const statusAbsen = item.keterangan; 
+        const styleStatusBadge = statusAbsen === 'MASUK' 
+            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+            : 'bg-blue-50 text-blue-600 border border-blue-100';
 
-                // Menggunakan fungsi getStatusBadge yang baru
-                const statusBadgeHtml = getStatusBadge(item.status);
+        // PERBAIKAN: Kita buat objek dataAbsen agar getStatusBadge bisa memprosesnya
+        // Sesuaikan nama field di bawah ini dengan struktur data asli Anda
+        const dataAbsenObj = {
+            tanggal: item.tanggal || new Date().toISOString(),
+            absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
+            absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : "")
+        };
 
-                const deskripsiTugas = statusAbsen === 'MASUK' ? 'Absen Datang Kerja' : (item.uraianTugas || 'Laporan Uraian Tugas');
-                const outputKegiatan = statusAbsen === 'MASUK' ? 'Hadir' : (item.outputKegiatan || 'Selesai');
+        const statusBadgeHtml = getStatusBadge(dataAbsenObj);
 
-                // Render baris ke Desktop Table
-                containerTable.append(`
-                    <tr class="hidden md:table-row hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
-                        <td class="py-4.5 px-6 text-slate-400 text-xs font-medium">${formatTanggalDisplay}</td>
-                        <td class="py-4.5 px-6 font-extrabold text-slate-800">${item.nama}</td>
-                        <td class="py-4.5 px-6 text-slate-400 font-mono text-xs select-all">Android Device</td>
-                        <td class="py-4.5 px-6">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">
-                                ${statusAbsen}
-                            </span>
-                        </td>
-                        <td class="py-4.5 px-6 text-slate-500 font-medium truncate max-w-[150px]" title="${deskripsiTugas}">${deskripsiTugas}</td>
-                        <td class="py-4.5 px-6 text-slate-500 font-medium truncate max-w-[150px]" title="${outputKegiatan}">${outputKegiatan}</td>
-                        <td class="py-4.5 px-6">
-                            <div class="flex flex-col">
-                                <span class="font-extrabold text-slate-800">${item.waktu || '-'}</span>
-                                ${statusBadgeHtml}
-                            </div>
-                        </td>
-                        <td class="py-4.5 px-6 text-center">
-                            <button onclick="openDetailModal(${index})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors active:scale-95">Detail</button>
-                        </td>
-                    </tr>
-                `);
+        const deskripsiTugas = statusAbsen === 'MASUK' ? 'Absen Datang Kerja' : (item.uraianTugas || 'Laporan Uraian Tugas');
+        const outputKegiatan = statusAbsen === 'MASUK' ? 'Hadir' : (item.outputKegiatan || 'Selesai');
 
-                // Render kartu ke Mobile List Container
-                containerMobile.append(`
-                    <div class="block md:hidden p-4 space-y-3 hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h4 class="text-sm font-extrabold text-slate-800">${item.nama}</h4>
-                                <p class="text-[10px] text-slate-400 font-medium mt-0.5">${formatTanggalDisplay} • ${item.waktu || '-'}</p>
-                            </div>
-                            <div class="flex flex-col items-end gap-1.5">
-                                <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">${statusAbsen}</span>
-                                ${statusBadgeHtml}
-                            </div>
-                        </div>
-                        <!-- ... sisa kode card mobile tetap sama ... -->
+        // Render baris ke Desktop Table
+        containerTable.append(`
+            <tr class="hidden md:table-row hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
+                <td class="py-4.5 px-6 text-slate-400 text-xs font-medium">${formatTanggalDisplay}</td>
+                <td class="py-4.5 px-6 font-extrabold text-slate-800">${item.nama}</td>
+                <td class="py-4.5 px-6 text-slate-400 font-mono text-xs select-all">Android Device</td>
+                <td class="py-4.5 px-6">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">
+                        ${statusAbsen}
+                    </span>
+                </td>
+                <td class="py-4.5 px-6 text-slate-500 font-medium truncate max-w-[150px]" title="${deskripsiTugas}">${deskripsiTugas}</td>
+                <td class="py-4.5 px-6 text-slate-500 font-medium truncate max-w-[150px]" title="${outputKegiatan}">${outputKegiatan}</td>
+                <td class="py-4.5 px-6">
+                    <div class="flex flex-col">
+                        <span class="font-extrabold text-slate-800">${item.waktu || '-'}</span>
+                        ${statusBadgeHtml}
                     </div>
-                `);
-            });
-        }
+                </td>
+                <td class="py-4.5 px-6 text-center">
+                    <button onclick="openDetailModal(${index})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors active:scale-95">Detail</button>
+                </td>
+            </tr>
+        `);
+
+        // Render kartu ke Mobile List Container
+        containerMobile.append(`
+            <div class="block md:hidden p-4 space-y-3 hover:bg-slate-50/50 transition-colors animate-fade-in" style="animation-delay: ${index * 20}ms">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="text-sm font-extrabold text-slate-800">${item.nama}</h4>
+                        <p class="text-[10px] text-slate-400 font-medium mt-0.5">${formatTanggalDisplay} • ${item.waktu || '-'}</p>
+                    </div>
+                    <div class="flex flex-col items-end gap-1.5">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">${statusAbsen}</span>
+                        ${statusBadgeHtml}
+                    </div>
+                </div>
+            </div>
+        `);
+    });
+}
+        
         function renderData(dataList) {
             const formatTanggalDisplay = $('#filterTanggal').val();
             renderDataCards(dataList, formatTanggalDisplay);
