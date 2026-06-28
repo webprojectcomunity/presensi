@@ -509,6 +509,7 @@ function renderDataCards(dataList, formatTanggalDisplay) {
             absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : "")
         };
 
+        console.log("Tanggal diproses:", dataAbsenObj.tanggal, "Hari (0-6):", new Date(dataAbsenObj.tanggal + "T00:00:00").getDay());
         const statusBadgeHtml = getStatusBadge(dataAbsenObj);
 
         const deskripsiTugas = statusAbsen === 'MASUK' ? 'Absen Datang Kerja' : (item.uraianTugas || 'Laporan Uraian Tugas');
