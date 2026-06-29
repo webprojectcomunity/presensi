@@ -64,17 +64,36 @@
         inisialisasiGPS();
     }
 };
-        function inisialisasiGPS() {
-            navigator.geolocation.getCurrentPosition(pos => {
-                lat = pos.coords.latitude;
-                lng = pos.coords.longitude;
-                document.getElementById('statusLokasi').innerText = "📍 Lokasi Siap: " + lat.toFixed(4) + ", " + lng.toFixed(4);
-                document.getElementById('btnMasuk').disabled = false;
-                document.getElementById('btnPulang').disabled = false;
-            }, () => {
-                document.getElementById('statusLokasi').innerText = "⚠️ GPS harus aktif untuk absen!";
-            }, { enableHighAccuracy: true });
+       function inisialisasiGPS() {
+    // Tampilkan status awal
+    document.getElementById('statusLokasi').innerText = "📍 Mencari lokasi GPS...";
+    
+    if (!navigator.geolocation) {
+        document.getElementById('statusLokasi').innerText = "❌ Browser tidak mendukung GPS.";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+            document.getElementById('statusLokasi').innerText = `✅ Lokasi Siap: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
+            // Aktifkan tombol
+            document.getElementById('btnMasuk').disabled = false;
+            document.getElementById('btnPulang').disabled = false;
+        },
+        (err) => {
+            console.error(err);
+            document.getElementById('statusLokasi').innerText = "⚠️ Gagal dapat lokasi. Pastikan GPS aktif!";
+        },
+        { 
+            enableHighAccuracy: true, // Menggunakan GPS tingkat tinggi
+            timeout: 20000,           // Memberi waktu tunggu 20 detik
+            maximumAge: 0 
         }
+    );
+}
 
         async function prosesDaftar() {
     const idInput = document.getElementById('regId').value.trim();
