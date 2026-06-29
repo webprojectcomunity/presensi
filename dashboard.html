@@ -440,34 +440,32 @@
  * @returns {String} - HTML Badge status
  */
 function getStatusBadge(dataAbsen) {
-    const tanggalInput = new Date(dataAbsen.tanggal + "T00:00:00"); 
-    const hari = tanggalInput.getDay(); 
-    
-    if (hari === 0 || hari === 6) {
+    // Ambil string status asli dari Spreadsheet (misal: "Tepat Waktu", "Absen tidak di lokasi (Tepat Waktu)")
+    const statusRaw = dataAbsen.status ? dataAbsen.status.toLowerCase() : "";
+
+    // 1. Cek jika Libur
+    const tanggalInput = new Date(dataAbsen.tanggal + "T00:00:00");
+    if (tanggalInput.getDay() === 0 || tanggalInput.getDay() === 6) {
         return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-sky-50 text-sky-600 border-sky-200">Libur Akhir Pekan</span>`;
     }
 
-    // 1. CEK STATUS PELANGGARAN TERLEBIH DAHULU (PENTING)
-    const statusRaw = dataAbsen.status ? dataAbsen.status.toLowerCase() : "";
-    if (statusRaw.includes("tidak di lokasi") || statusRaw.includes("tidak dilokasi")) {
+    // 2. Cek Pelanggaran Lokasi
+    if (statusRaw.includes("tidak di lokasi") || statusRaw.includes("luar radius")) {
         return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-rose-50 text-rose-600 border-rose-200">Diluar Lokasi</span>`;
     }
 
-    // 2. Logika absen lengkap/tidak
-    const absenPagi = dataAbsen.absenPagi ? dataAbsen.absenPagi.trim() : "";
-    const absenPulang = dataAbsen.absenPulang ? dataAbsen.absenPulang.trim() : "";
-    
-    const adaPagi = absenPagi !== "";
-    const adaPulang = absenPulang !== "";
-    const baseClass = "px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border";
-    
-    if (!adaPagi && !adaPulang) {
-        return `<span class="${baseClass} bg-slate-100 text-slate-500 border-slate-200">Tidak Absen</span>`;
+    // 3. Cek Terlambat
+    if (statusRaw.includes("terlambat")) {
+        return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-orange-50 text-orange-600 border-orange-200">Terlambat</span>`;
     }
-    if ((adaPagi && !adaPulang) || (!adaPagi && adaPulang)) {
-        return `<span class="${baseClass} bg-amber-50 text-amber-600 border-amber-200">Absen Tidak Lengkap</span>`;
-    }    
-    return `<span class="${baseClass} bg-emerald-50 text-emerald-600 border-emerald-200">Hadir Lengkap</span>`;
+
+    // 4. Cek Tepat Waktu
+    if (statusRaw.includes("tepat waktu")) {
+        return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-emerald-50 text-emerald-600 border-emerald-200">Tepat Waktu</span>`;
+    }
+
+    // Default jika status kosong atau tidak dikenali
+    return `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold text-center mt-1 w-max border bg-slate-100 text-slate-500 border-slate-200">${dataAbsen.status || 'Tidak Absen'}</span>`;
 }
         
         function tentukanStatus(dataAbsenHariIni, tanggalPengecekan) {
