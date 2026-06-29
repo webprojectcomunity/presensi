@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
+
+    <div id="pageDaftar" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Registrasi Karyawan</h2>
+        <div class="space-y-4">
+            <input type="text" id="regId" class="w-full p-2 border rounded-lg" placeholder="ID Karyawan">
+            <input type="text" id="regNama" class="w-full p-2 border rounded-lg" placeholder="Nama Lengkap">
+            <button onclick="prosesDaftar()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">DAFTAR SEKARANG</button>
+        </div>
+    </div>
+
+    <div id="pageAbsen" class="hidden bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center text-slate-800 mb-2">Absensi</h2>
+        <p class="text-center text-slate-500 text-sm mb-6" id="statusLokasi">Mencari lokasi...</p>
+        
+        <div class="space-y-4">
+            <textarea id="uraian" class="w-full p-2 border rounded-lg" placeholder="Uraian Tugas"></textarea>
+            <input type="text" id="output" class="w-full p-2 border rounded-lg" placeholder="Output Kegiatan">
+            
+            <div class="flex gap-2 pt-4">
+                <button id="btnMasuk" onclick="kirimAbsen('MASUK')" class="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl">MASUK</button>
+                <button id="btnPulang" onclick="kirimAbsen('PULANG')" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl">PULANG</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inisialisasi
+        let deviceIdWeb = localStorage.getItem("webDeviceId") || 'WEB-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("webDeviceId", deviceIdWeb);
+
+        window.onload = () => {
+            if (localStorage.getItem("savedIdKaryawan")) {
+                document.getElementById('pageDaftar').classList.add('hidden');
+                document.getElementById('pageAbsen').classList.remove('hidden');
+            }
+        };
+
+        // Fungsi Daftar
+        async function prosesDaftar() {
+            const id = document.getElementById('regId').value;
+            const nama = document.getElementById('regNama').value;
+            
+            const payload = { action: "register", id, nama, deviceId: deviceIdWeb };
+            
+            const res = await fetch("https://script.google.com/macros/s/AKfycbzFi2rasPQracQJ9WMU3805SjnmfyNxtMYIli0rzLuWI-Yfx2m3Q_aXLGLgTJ7fh41U/exec", {
+                method: 'POST',
+                mode: 'cors',
+                body: JSON.stringify(payload)
+            });
+            
+            const msg = await res.text();
+            alert(msg);
+            if (msg.includes("Berhasil")) {
+                localStorage.setItem("savedIdKaryawan", id);
+                location.reload();
+            }
+        }
+
+        // Fungsi Absen (Logika sama seperti sebelumnya)
+        async function kirimAbsen(tipe) {
+            const payload = {
+                action: "verify",
+                id: localStorage.getItem("savedIdKaryawan"),
+                deviceId: deviceIdWeb,
+                latitude: 0, // Tambahkan logika GPS Anda di sini
+                longitude: 0,
+                uraianTugas: document.getElementById('uraian').value,
+                outputKegiatan: document.getElementById('output').value
+            };
+            // ... kirim ke server ...
+            alert("Mengirim absen sebagai " + payload.id);
+        }
+    </script>
+</body>
+</html>
