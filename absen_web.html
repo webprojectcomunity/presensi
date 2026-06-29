@@ -8,16 +8,7 @@
 </head>
 <body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
 
-    <div id="pageDaftar" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Registrasi Karyawan</h2>
-        <div class="space-y-4">
-            <input type="text" id="regId" class="w-full p-2 border rounded-lg" placeholder="ID Karyawan">
-            <input type="text" id="regNama" class="w-full p-2 border rounded-lg" placeholder="Nama Lengkap">
-            <button onclick="prosesDaftar()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">DAFTAR SEKARANG</button>
-        </div>
-    </div>
-
-    <div id="pageAbsen" class="hidden bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+    <div id="pageAbsen" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
         <h2 class="text-2xl font-bold text-center text-slate-800 mb-2">Absensi</h2>
         <p class="text-center text-slate-500 text-sm mb-6" id="statusLokasi">Mencari lokasi GPS...</p>
         
@@ -26,9 +17,23 @@
             <input type="text" id="output" class="w-full p-2 border rounded-lg" placeholder="Output Kegiatan">
             
             <div class="flex gap-2 pt-4">
-                <button id="btnMasuk" disabled onclick="kirimAbsen('MASUK')" class="flex-1 bg-emerald-500 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl">MASUK</button>
-                <button id="btnPulang" disabled onclick="kirimAbsen('PULANG')" class="flex-1 bg-blue-500 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl">PULANG</button>
+                <button id="btnMasuk" disabled onclick="kirimAbsen('MASUK')" class="flex-1 bg-emerald-500 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition">MASUK</button>
+                <button id="btnPulang" disabled onclick="kirimAbsen('PULANG')" class="flex-1 bg-blue-500 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition">PULANG</button>
             </div>
+            
+            <button id="btnDaftarNav" onclick="tampilkanDaftar()" class="w-full text-slate-400 text-sm hover:text-indigo-600 mt-4 transition">
+                Belum terdaftar? Klik di sini untuk Daftar
+            </button>
+        </div>
+    </div>
+
+    <div id="pageDaftar" class="hidden bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Registrasi Karyawan</h2>
+        <div class="space-y-4">
+            <input type="text" id="regId" class="w-full p-2 border rounded-lg" placeholder="ID Karyawan">
+            <input type="text" id="regNama" class="w-full p-2 border rounded-lg" placeholder="Nama Lengkap">
+            <button onclick="prosesDaftar()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">DAFTAR SEKARANG</button>
+            <button onclick="batalDaftar()" class="w-full text-slate-400 text-sm mt-2">Kembali ke Absensi</button>
         </div>
     </div>
 
@@ -38,39 +43,82 @@
         let deviceIdWeb = localStorage.getItem("webDeviceId") || 'WEB-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("webDeviceId", deviceIdWeb);
 
-        // 1. Cek Login & Aktifkan GPS
-        window.onload = () => {
-            if (localStorage.getItem("savedIdKaryawan")) {
-                document.getElementById('pageDaftar').classList.add('hidden');
-                document.getElementById('pageAbsen').classList.remove('hidden');
-                
-                navigator.geolocation.getCurrentPosition(pos => {
-                    lat = pos.coords.latitude;
-                    lng = pos.coords.longitude;
-                    document.getElementById('statusLokasi').innerText = "📍 Lokasi Siap";
-                    document.getElementById('btnMasuk').disabled = false;
-                    document.getElementById('btnPulang').disabled = false;
-                }, () => alert("GPS harus aktif untuk absen!"));
-            }
-        };
-
-        // 2. Fungsi Daftar
-        async function prosesDaftar() {
-            const payload = { action: "register", id: document.getElementById('regId').value, nama: document.getElementById('regNama').value, deviceId: deviceIdWeb };
-            const res = await fetch(scriptUrl, { method: 'POST', mode: 'cors', body: JSON.stringify(payload) });
-            const msg = await res.text();
-            alert(msg);
-            if (msg.includes("Berhasil")) {
-                localStorage.setItem("savedIdKaryawan", payload.id);
-                location.reload();
-            }
+        // --- NAVIGASI HALAMAN ---
+        function tampilkanDaftar() {
+            document.getElementById('pageAbsen').classList.add('hidden');
+            document.getElementById('pageDaftar').classList.remove('hidden');
         }
 
-        // 3. Fungsi Absen (Yang tadi belum jalan)
+        function batalDaftar() {
+            document.getElementById('pageDaftar').classList.add('hidden');
+            document.getElementById('pageAbsen').classList.remove('hidden');
+        }
+
+        // --- LOGIKA UTAMA ---
+        window.onload = () => {
+    const id = localStorage.getItem("savedIdKaryawan");
+    console.log("ID Karyawan ditemukan:", id); // Cek ini di console
+    if (id) {
+        document.getElementById('pageDaftar').classList.add('hidden');
+        document.getElementById('pageAbsen').classList.remove('hidden');
+        inisialisasiGPS();
+    }
+};
+        function inisialisasiGPS() {
+            navigator.geolocation.getCurrentPosition(pos => {
+                lat = pos.coords.latitude;
+                lng = pos.coords.longitude;
+                document.getElementById('statusLokasi').innerText = "📍 Lokasi Siap: " + lat.toFixed(4) + ", " + lng.toFixed(4);
+                document.getElementById('btnMasuk').disabled = false;
+                document.getElementById('btnPulang').disabled = false;
+            }, () => {
+                document.getElementById('statusLokasi').innerText = "⚠️ GPS harus aktif untuk absen!";
+            }, { enableHighAccuracy: true });
+        }
+
+        async function prosesDaftar() {
+    const idInput = document.getElementById('regId').value.trim();
+    const namaInput = document.getElementById('regNama').value.trim();
+    
+    if (!idInput || !namaInput) { 
+        alert("ID dan Nama wajib diisi!"); 
+        return; 
+    }
+
+    const payload = { action: "register", id: idInput, nama: namaInput, deviceId: deviceIdWeb };
+    
+    try {
+        const res = await fetch(scriptUrl, { 
+            method: 'POST', 
+            mode: 'cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload) 
+        });
+        
+        const msg = await res.text();
+        
+        // Debugging: Log pesan ke konsol browser (F12)
+        console.log("Respons Server:", msg);
+
+        if (msg.toLowerCase().includes("berhasil")) {
+            alert("Registrasi Berhasil!");
+            localStorage.setItem("savedIdKaryawan", idInput);
+            
+            // Pindah halaman dengan pasti
+            batalDaftar();
+            inisialisasiGPS();
+        } else {
+            alert("Pesan Server: " + msg);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Gagal terhubung ke server. Pastikan koneksi internet stabil.");
+    }
+}
         async function kirimAbsen(tipe) {
             const payload = {
                 action: "verify",
-                tipeAbsen: tipe, // Pastikan GAS Anda menangkap ini
+                tipeAbsen: tipe,
                 id: localStorage.getItem("savedIdKaryawan"),
                 deviceId: deviceIdWeb,
                 latitude: lat,
@@ -78,15 +126,13 @@
                 uraianTugas: document.getElementById('uraian').value,
                 outputKegiatan: document.getElementById('output').value
             };
-
             const res = await fetch(scriptUrl, {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const msg = await res.text();
-            alert(msg);
+            alert(await res.text());
         }
     </script>
 </body>
