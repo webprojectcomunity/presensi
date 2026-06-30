@@ -500,15 +500,12 @@ function renderDataCards(dataList, formatTanggalDisplay) {
     }
 
     dataList.forEach((item, dashboard) => {
-        // --- PROSES TANGGAL DENGAN PROTEKSI ---
-        // Jika item.tanggal tidak ada/undefined, gunakan string kosong agar tidak error
         const tglStr = item.tanggal || ""; 
         const parts = tglStr.split('/'); 
         
-        // Cek apakah hasil split valid (harus ada 3 bagian)
         const dateObj = (parts.length === 3) 
             ? new Date(parts[2], parts[1] - 1, parts[0]) 
-            : new Date(); // Fallback ke tanggal hari ini jika format salah
+            : new Date();
             
         const dayOfWeek = dateObj.getDay(); 
 
@@ -518,12 +515,12 @@ function renderDataCards(dataList, formatTanggalDisplay) {
             : 'bg-blue-50 text-blue-600 border border-blue-100';
 
         const dataAbsenObj = {
-    tanggal: tglStr,
-    absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
-    absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
-    status: item.status, // <--- TAMBAHKAN BARIS INI
-    dayOfWeek: dayOfWeek
-};
+            tanggal: tglStr,
+            absenPagi: item.absenPagi || (statusAbsen === 'MASUK' ? item.waktu : ""),
+            absenPulang: item.absenPulang || (statusAbsen === 'PULANG' ? item.waktu : ""),
+            status: item.status,
+            dayOfWeek: dayOfWeek
+        };
 
         const statusBadgeHtml = getStatusBadge(dataAbsenObj);
         const deskripsiTugas = statusAbsen === 'MASUK' ? 'Absen Datang Kerja' : (item.uraianTugas || 'Laporan Uraian Tugas');
@@ -553,10 +550,32 @@ function renderDataCards(dataList, formatTanggalDisplay) {
                 </td>
             </tr>
         `);
+
+        // TAMBAHAN BARU: Render elemen ke Mobile View
+        containerMobile.append(`
+            <div class="p-4 bg-white hover:bg-slate-50 transition-colors animate-fade-in flex flex-col gap-3" style="animation-delay: ${dashboard * 20}ms">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="text-sm font-extrabold text-slate-800">${item.nama || 'Tanpa Nama'}</h4>
+                        <p class="text-[10px] text-slate-400 mt-1">${formatTanggalDisplay || tglStr} • ${item.waktu || '-'}</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${styleStatusBadge}">
+                        ${statusAbsen}
+                    </span>
+                </div>
+                
+                <div class="flex items-center justify-between mt-1">
+                    <div>
+                        ${statusBadgeHtml}
+                    </div>
+                    <button onclick="openDetailModal(${dashboard})" class="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 font-bold px-4 py-1.5 rounded-xl text-xs transition-colors active:scale-95">
+                        Detail
+                    </button>
+                </div>
+            </div>
+        `);
     });
-}
-        
-        function renderData(dataList) {
+}       function renderData(dataList) {
             const formatTanggalDisplay = $('#filterTanggal').val();
             renderDataCards(dataList, formatTanggalDisplay);
         }
