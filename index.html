@@ -44,16 +44,24 @@
         overlay.addEventListener('click', toggleSidebar);
 
         // Fungsi load konten
-        function loadContent(url) {
-            const contentArea = document.getElementById('content-area');
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    contentArea.innerHTML = html;
-                    // Tutup sidebar otomatis di mobile setelah klik menu
-                    if (window.innerWidth < 768) toggleSidebar();
-                });
-        }
+       function loadContent(url) {
+    const contentArea = document.getElementById('content-area');
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            contentArea.innerHTML = html;
+            
+            // Cari semua tag script di dalam konten yang baru dimuat dan eksekusi
+            const scripts = contentArea.getElementsByTagName('script');
+            for (let i = 0; i < scripts.length; i++) {
+                const newScript = document.createElement('script');
+                newScript.text = scripts[i].text;
+                document.body.appendChild(newScript);
+            }
+
+            if (window.innerWidth < 768) toggleSidebar();
+        });
+}
     </script>
 </body>
 </html>
