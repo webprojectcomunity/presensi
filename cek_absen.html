@@ -148,24 +148,38 @@
   }
 
   // Fungsi Parser Tanggal (Menyesuaikan format Google Sheets Indonesia)
+  // Fungsi Parser Tanggal (Diperbarui untuk mengatasi bentrok format Amerika/Indonesia)
   function parseSheetDate(dateStr) {
-    if (!dateStr) return new Date();
+    if (!dateStr) return new Date(0); // Jika kosong, kembalikan ke masa lalu
     
-    // Coba parsing standar Javascript dulu
+    try {
+      // Pecah string berdasarkan spasi untuk memisahkan Tanggal dan Jam
+      // Contoh: "08/07/2026 09:15:30" menjadi array ["08/07/2026", "09:15:30"]
+      let parts = dateStr.trim().split(' ');
+      let datePart = parts[0]; 
+      
+      // Pecah lagi bagian tanggal berdasarkan garis miring (/) atau strip (-)
+      let d = datePart.split(/[\/\-]/); 
+      
+      if (d.length === 3) {
+        // Cek jika tahun ada di depan (YYYY/MM/DD)
+        if (d[0].length === 4) {
+          return new Date(d[0], d[1] - 1, d[2]);
+        } 
+        // Jika tahun ada di belakang (DD/MM/YYYY) - Format Indonesia
+        else {
+          // Urutan Date: Tahun (d[2]), Bulan index 0 (d[1]-1), Hari (d[0])
+          return new Date(d[2], d[1] - 1, d[0]); 
+        }
+      }
+    } catch(e) { 
+      console.error("Format gagal dipecah manual:", dateStr); 
+    }
+    // Fallback: Jika formatnya teks bahasa Inggris (misal: "Wed Jul 08 2026")
     let parsed = Date.parse(dateStr);
     if (!isNaN(parsed)) return new Date(parsed);
 
-    // Jika gagal (biasanya karena format DD/MM/YYYY), pecah manual
-    try {
-      let parts = dateStr.split(' ');
-      let d = parts[0].split(/[\/\-]/);
-      if (d.length === 3) {
-        if (d[0].length === 4) return new Date(d[0], d[1]-1, d[2]); // YYYY/MM/DD
-        return new Date(d[2], d[1]-1, d[0]); // DD/MM/YYYY
-      }
-    } catch(e) { console.error("Format tanggal tidak dikenali:", dateStr); }
-    
-    return new Date();
+    return new Date(0); // Kembalikan ke tahun 1970 jika gagal, agar tidak tembus ke filter hari ini
   }
 
   // Tarik Data dari Server (Hanya dilakukan 1x di awal atau saat Refresh)
