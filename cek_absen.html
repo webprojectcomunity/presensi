@@ -1,77 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Rincian Absensi Pegawai</title>
+  
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
   <style>
-    body { background-color: #f8f9fa; padding: 20px; font-family: sans-serif; }
-    .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    #map { height: 400px; width: 100%; border-radius: 8px; }
-    .table-responsive { max-height: 400px; overflow-y: auto; }
-    .loader { display: none; text-align: center; margin: 20px 0; }
+    body { 
+      background-color: #f4f6f9; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding-bottom: 20px;
+    }
+    
+    /* Header App Bar bergaya Mobile */
+    .app-header {
+      background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+      color: white;
+      padding: 15px 15px 10px 15px;
+      border-bottom-left-radius: 15px;
+      border-bottom-right-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+    }
+
+    /* Peta dioptimalkan untuk layar HP */
+    #map { 
+      height: 35vh; /* Mengambil 35% tinggi layar HP */
+      width: 100%; 
+      border-radius: 12px;
+      z-index: 1;
+    }
+    
+    .map-container {
+      background: white;
+      padding: 8px;
+      border-radius: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin: 0 10px 15px 10px;
+    }
+
+    /* Styling Data Card pengganti Tabel */
+    .list-container {
+      padding: 0 10px;
+    }
+    .absen-card {
+      background: white;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      margin-bottom: 12px;
+      transition: transform 0.2s;
+    }
+    .absen-card:active {
+      transform: scale(0.98);
+    }
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .detail-text {
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 4px;
+    }
+    
+    .loader { display: none; text-align: center; margin: 30px 0; }
+    
+    /* Utilitas tambahan */
+    .btn-lokasi {
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
 <body>
 
-<div class="container-fluid">
-  <div class="row mb-3">
-    <div class="col-12 text-center bg-primary text-white p-3 rounded shadow">
-      <h2>DASHBOARD ABSENSI PEGAWAI</h2>
-      <p class="mb-0" id="dev-info">Mendeteksi Device ID...</p>
-    </div>
+<div class="app-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-fingerprint me-2"></i>Absensi</h5>
+    <button class="btn btn-sm btn-light rounded-circle" onclick="loadData()" aria-label="Refresh">
+      <i class="bi bi-arrow-clockwise"></i>
+    </button>
   </div>
+  <p class="mb-0 mt-2 small text-light opacity-75" id="dev-info"><i class="bi bi-phone"></i> Mendeteksi Device...</p>
+</div>
 
-  <div class="row">
-    <div class="col-lg-7">
-      <div class="card">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Rincian Riwayat Absensi</h5>
-          <button class="btn btn-sm btn-success" onclick="loadData()">Refresh Data</button>
-        </div>
-        <div class="card-body">
-          <div class="loader" id="loading">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p>Memuat data log absensi...</p>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle small">
-              <thead class="table-primary sticky-top">
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Nama</th>
-                  <th>ID Device</th>
-                  <th>Keterangan</th>
-                  <th>Uraian Tugas</th>
-                  <th>Output Kegiatan</th>
-                  <th>Jam Log</th>
-                  <th>Status</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="table-body">
-                <tr>
-                  <td colspan="9" class="text-center text-muted">Belum ada data tersedia.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-5">
-      <div class="card">
-        <div class="card-header bg-danger text-white">
-          <h5 class="mb-0">Peta Sebaran Titik Absen</h5>
-        </div>
-        <div class="card-body p-2">
-          <div id="map"></div>
-        </div>
-      </div>
-    </div>
+<div class="map-container">
+  <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+    <span class="fw-bold text-secondary" style="font-size: 0.9rem;">
+      <i class="bi bi-geo-alt-fill text-danger"></i> Peta Lokasi
+    </span>
   </div>
+  <div id="map"></div>
+</div>
+
+<div class="list-container">
+  <h6 class="fw-bold text-secondary mb-3 ms-1"><i class="bi bi-clock-history"></i> Riwayat Hari Ini</h6>
+  
+  <div class="loader" id="loading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 small text-muted">Sinkronisasi data...</p>
+  </div>
+  
+  <div id="data-container">
+    </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -82,103 +125,138 @@
   let markersLayer = L.layerGroup();
   let deviceIdConstant = "";
 
-  // 1. Ambil Parameter Device ID dari URL webapp yang diakses HP 
-  // Contoh format di HP: https://script.google.com/.../exec?deviceId=HP-IPHONE-01
   const urlParams = new URLSearchParams(window.location.search);
   deviceIdConstant = urlParams.get('deviceId') || "";
 
-  document.getElementById('dev-info').innerText = deviceIdConstant 
-    ? "Terfilter konstan untuk Device ID: " + deviceIdConstant 
-    : "Menampilkan semua data (Device ID kosong di URL)";
+  document.getElementById('dev-info').innerHTML = deviceIdConstant 
+    ? `<i class="bi bi-phone"></i> ID: ${deviceIdConstant}`
+    : `<i class="bi bi-globe"></i> Semua Perangkat (Admin View)`;
 
-  // 2. Inisialisasi Peta Awal (Default Center Indonesia)
   function initMap() {
-    map = L.map('map').setView([-2.5489, 118.0149], 5);
+    map = L.map('map', { zoomControl: false }).setView([-2.5489, 118.0149], 5);
+    
+    // Pindahkan posisi zoom control
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap'
     }).addTo(map);
     markersLayer.addTo(map);
   }
 
-  // 3. Load data dari Spreadsheet via API internal apps script
   function loadData() {
     document.getElementById('loading').style.display = 'block';
-    const tbody = document.getElementById('table-body');
-    tbody.innerHTML = '';
+    const container = document.getElementById('data-container');
+    container.innerHTML = '';
     markersLayer.clearLayers();
 
-    // Panggil fungsi backend 'google.script.run' ke Apps Script
-    // atau fetch manual jika di-deploy sebagai Web API publik
-    let webAppUrl = "<?= ScriptApp.getService().getUrl() ?>";
+    // URL Web App Anda
+    let webAppUrl = "https://script.google.com/macros/s/AKfycbzFi2rasPQracQJ9WMU3805SjnmfyNxtMYIli0rzLuWI-Yfx2m3Q_aXLGLgTJ7fh41U/exec";
     let fetchUrl = webAppUrl + "?request=getAllData&deviceId=" + encodeURIComponent(deviceIdConstant);
 
     fetch(fetchUrl)
       .then(response => response.json())
       .then(data => {
         document.getElementById('loading').style.display = 'none';
+        
         if (!data || data.length === 0 || data.error) {
-          tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">${data.error || 'Data absensi tidak ditemukan untuk perangkat ini.'}</td></tr>`;
+          container.innerHTML = `
+            <div class="alert alert-warning text-center small rounded-4">
+              <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+              ${data.error || 'Belum ada log absensi.'}
+            </div>`;
           return;
         }
 
         let mapBounds = [];
 
-        data.forEach(item => {
-          // Tambah Baris ke Tabel
-          let tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${item.timestamp}</td>
-            <td><strong>${item.nama}</strong></td>
-            <td><span class="badge bg-secondary">${item.deviceId}</span></td>
-            <td><span class="badge ${item.keterangan === 'MASUK' ? 'bg-success' : 'bg-warning'}">${item.keterangan}</span></td>
-            <td>${item.uraianTugas || '-'}</td>
-            <td>${item.outputKegiatan || '-'}</td>
-            <td>${item.waktu}</td>
-            <td><span class="text-${item.status.toLowerCase().includes('terlambat') ? 'danger' : 'success'}">${item.status}</span></td>
-            <td><button class="btn btn-xs btn-primary py-0 px-1" onclick="focusMarker(${item.lat}, ${item.lng}, '${item.nama}')">Lihat</button></td>
-          `;
-          tbody.appendChild(tr);
+        // Reverse data agar log terbaru (baris paling bawah sheet) muncul paling atas di aplikasi
+        data.reverse().forEach(item => {
+          
+          let isMasuk = item.keterangan.toUpperCase() === 'MASUK';
+          let badgeColor = isMasuk ? 'bg-success' : 'bg-warning text-dark';
+          let iconStatus = isMasuk ? 'bi-box-arrow-in-right' : 'bi-box-arrow-right';
+          
+          // Status keterlambatan
+          let statusTextClass = item.status.toLowerCase().includes('terlambat') ? 'text-danger fw-bold' : 'text-success fw-bold';
 
-          // Tambah Pin ke Peta jika koordinat valid
+          // Buat Card HTML
+          let card = document.createElement('div');
+          card.className = 'card absen-card p-3';
+          card.innerHTML = `
+            <div class="card-title-row">
+              <div>
+                <h6 class="mb-0 fw-bold">${item.nama}</h6>
+                <div class="small text-muted" style="font-size: 0.75rem;">${item.timestamp}</div>
+              </div>
+              <span class="badge ${badgeColor}"><i class="bi ${iconStatus}"></i> ${item.keterangan}</span>
+            </div>
+            
+            <hr class="my-2 text-muted opacity-25">
+            
+            <div class="detail-text">
+              <i class="bi bi-clock"></i> Jam Log: <strong>${item.waktu}</strong> 
+              (<span class="${statusTextClass}">${item.status}</span>)
+            </div>
+            <div class="detail-text">
+              <i class="bi bi-journal-text"></i> Tugas: ${item.uraianTugas || '-'}
+            </div>
+            <div class="detail-text">
+              <i class="bi bi-check-circle"></i> Output: ${item.outputKegiatan || '-'}
+            </div>
+
+            <button class="btn btn-outline-primary btn-sm btn-lokasi w-100 mt-3" 
+              onclick="focusMarker(${item.lat}, ${item.lng}, '${item.nama}', '${item.keterangan}')">
+              <i class="bi bi-crosshair"></i> Cek Lokasi Peta
+            </button>
+          `;
+          container.appendChild(card);
+
+          // Tambah Pin ke Peta
           if (item.lat && item.lng) {
-            let markerColor = item.keterangan === 'MASUK' ? 'green' : 'orange';
             let marker = L.marker([item.lat, item.lng])
               .bindPopup(`
-                <b>${item.nama}</b><br>
-                Status: ${item.keterangan}<br>
-                Jam: ${item.waktu} (${item.status})<br>
-                Tugas: ${item.uraianTugas}
+                <div class="text-center">
+                  <strong>${item.nama}</strong><br>
+                  <span class="badge ${badgeColor} my-1">${item.keterangan}</span><br>
+                  <small>${item.waktu}</small>
+                </div>
               `);
             markersLayer.addLayer(marker);
             mapBounds.push([item.lat, item.lng]);
           }
         });
 
-        // Autofit zoom peta agar mencakup semua titik koordinat yang ada
+        // Autofit peta
         if (mapBounds.length > 0) {
-          map.fitBounds(mapBounds);
+          map.fitBounds(mapBounds, { padding: [20, 20] });
         }
       })
       .catch(err => {
         document.getElementById('loading').style.display = 'none';
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Gagal memuat API data: ${err}</td></tr>`;
+        container.innerHTML = `
+          <div class="alert alert-danger text-center small rounded-4">
+            <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
+            Koneksi server gagal: ${err}
+          </div>`;
       });
   }
 
-  // Fungsi untuk memfokuskan peta ke titik tertentu saat tombol 'Lihat' diklik
-  function focusMarker(lat, lng, nama) {
+  function focusMarker(lat, lng, nama, ket) {
     if (lat && lng) {
-      map.setView([lat, lng], 17);
+      // Smooth scroll kembali ke atas (ke arah peta)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      map.flyTo([lat, lng], 17, { duration: 1.5 });
       L.popup()
         .setLatLng([lat, lng])
-        .setContent(`<b>Lokasi: ${nama}</b>`)
+        .setContent(`<div class="text-center"><b>${nama}</b><br><small>${ket}</small></div>`)
         .openOn(map);
     } else {
-      alert("Koordinat absen tidak valid!");
+      alert("Koordinat absen tidak valid atau belum tersimpan!");
     }
   }
 
-  // Jalankan ketika halaman dimuat
   window.onload = function() {
     initMap();
     loadData();
