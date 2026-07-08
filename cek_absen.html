@@ -18,7 +18,6 @@
       padding-bottom: 20px;
     }
     
-    /* Header App Bar bergaya Mobile */
     .app-header {
       background: linear-gradient(135deg, #0d6efd, #0b5ed7);
       color: white;
@@ -32,9 +31,8 @@
       z-index: 1020;
     }
 
-    /* Peta dioptimalkan untuk layar HP */
     #map { 
-      height: 35vh; /* Mengambil 35% tinggi layar HP */
+      height: 35vh; 
       width: 100%; 
       border-radius: 12px;
       z-index: 1;
@@ -48,7 +46,6 @@
       margin: 0 10px 15px 10px;
     }
 
-    /* Styling Data Card pengganti Tabel */
     .list-container {
       padding: 0 10px;
     }
@@ -77,7 +74,6 @@
     
     .loader { display: none; text-align: center; margin: 30px 0; }
     
-    /* Utilitas tambahan */
     .btn-lokasi {
       border-radius: 20px;
       font-size: 0.8rem;
@@ -89,7 +85,7 @@
 <div class="app-header">
   <div class="d-flex justify-content-between align-items-center">
     <h5 class="mb-0 fw-bold"><i class="bi bi-fingerprint me-2"></i>Absensi</h5>
-    <button class="btn btn-sm btn-light rounded-circle" onclick="loadData()" aria-label="Refresh">
+    <button class="btn btn-sm btn-light rounded-circle" onclick="fetchData()" aria-label="Refresh">
       <i class="bi bi-arrow-clockwise"></i>
     </button>
   </div>
@@ -99,14 +95,22 @@
 <div class="map-container">
   <div class="d-flex justify-content-between align-items-center mb-2 px-1">
     <span class="fw-bold text-secondary" style="font-size: 0.9rem;">
-      <i class="bi bi-geo-alt-fill text-danger"></i> Peta Lokasi
+      <i class="bi bi-geo-alt-fill text-danger"></i> Lokasi Log
     </span>
   </div>
   <div id="map"></div>
 </div>
 
 <div class="list-container">
-  <h6 class="fw-bold text-secondary mb-3 ms-1"><i class="bi bi-clock-history"></i> Riwayat Hari Ini</h6>
+  <div class="d-flex justify-content-between align-items-center mb-3 ms-1">
+    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-card-list"></i> Riwayat Absen</h6>
+    <select id="filterWaktu" class="form-select form-select-sm w-auto shadow-sm border-primary" onchange="renderData()">
+      <option value="harian" selected>Hari Ini</option>
+      <option value="mingguan">7 Hari Terakhir</option>
+      <option value="bulanan">Bulan Ini</option>
+      <option value="semua">Semua Data</option>
+    </select>
+  </div>
   
   <div class="loader" id="loading">
     <div class="spinner-border text-primary" role="status"></div>
@@ -124,6 +128,7 @@
   let map;
   let markersLayer = L.layerGroup();
   let deviceIdConstant = "";
+  let masterData = []; // Menyimpan semua data mentah dari server
 
   const urlParams = new URLSearchParams(window.location.search);
   deviceIdConstant = urlParams.get('deviceId') || "";
@@ -132,25 +137,44 @@
     ? `<i class="bi bi-phone"></i> ID: ${deviceIdConstant}`
     : `<i class="bi bi-globe"></i> Semua Perangkat (Admin View)`;
 
+  // Inisialisasi Peta
   function initMap() {
     map = L.map('map', { zoomControl: false }).setView([-2.5489, 118.0149], 5);
-    
-    // Pindahkan posisi zoom control
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap'
     }).addTo(map);
     markersLayer.addTo(map);
   }
 
-  function loadData() {
+  // Fungsi Parser Tanggal (Menyesuaikan format Google Sheets Indonesia)
+  function parseSheetDate(dateStr) {
+    if (!dateStr) return new Date();
+    
+    // Coba parsing standar Javascript dulu
+    let parsed = Date.parse(dateStr);
+    if (!isNaN(parsed)) return new Date(parsed);
+
+    // Jika gagal (biasanya karena format DD/MM/YYYY), pecah manual
+    try {
+      let parts = dateStr.split(' ');
+      let d = parts[0].split(/[\/\-]/);
+      if (d.length === 3) {
+        if (d[0].length === 4) return new Date(d[0], d[1]-1, d[2]); // YYYY/MM/DD
+        return new Date(d[2], d[1]-1, d[0]); // DD/MM/YYYY
+      }
+    } catch(e) { console.error("Format tanggal tidak dikenali:", dateStr); }
+    
+    return new Date();
+  }
+
+  // Tarik Data dari Server (Hanya dilakukan 1x di awal atau saat Refresh)
+  function fetchData() {
     document.getElementById('loading').style.display = 'block';
-    const container = document.getElementById('data-container');
-    container.innerHTML = '';
+    document.getElementById('data-container').innerHTML = '';
     markersLayer.clearLayers();
 
-    // URL Web App Anda
+    // PASTIKAN URL INI ADALAH URL WEB APP ANDA YANG AKTIF
     let webAppUrl = "https://script.google.com/macros/s/AKfycbzFi2rasPQracQJ9WMU3805SjnmfyNxtMYIli0rzLuWI-Yfx2m3Q_aXLGLgTJ7fh41U/exec";
     let fetchUrl = webAppUrl + "?request=getAllData&deviceId=" + encodeURIComponent(deviceIdConstant);
 
@@ -160,81 +184,24 @@
         document.getElementById('loading').style.display = 'none';
         
         if (!data || data.length === 0 || data.error) {
-          container.innerHTML = `
+          document.getElementById('data-container').innerHTML = `
             <div class="alert alert-warning text-center small rounded-4">
               <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
-              ${data.error || 'Belum ada log absensi.'}
+              ${data.error || 'Belum ada log absensi di sistem.'}
             </div>`;
+          masterData = [];
           return;
         }
 
-        let mapBounds = [];
-
-        // Reverse data agar log terbaru (baris paling bawah sheet) muncul paling atas di aplikasi
-        data.reverse().forEach(item => {
-          
-          let isMasuk = item.keterangan.toUpperCase() === 'MASUK';
-          let badgeColor = isMasuk ? 'bg-success' : 'bg-warning text-dark';
-          let iconStatus = isMasuk ? 'bi-box-arrow-in-right' : 'bi-box-arrow-right';
-          
-          // Status keterlambatan
-          let statusTextClass = item.status.toLowerCase().includes('terlambat') ? 'text-danger fw-bold' : 'text-success fw-bold';
-
-          // Buat Card HTML
-          let card = document.createElement('div');
-          card.className = 'card absen-card p-3';
-          card.innerHTML = `
-            <div class="card-title-row">
-              <div>
-                <h6 class="mb-0 fw-bold">${item.nama}</h6>
-                <div class="small text-muted" style="font-size: 0.75rem;">${item.timestamp}</div>
-              </div>
-              <span class="badge ${badgeColor}"><i class="bi ${iconStatus}"></i> ${item.keterangan}</span>
-            </div>
-            
-            <hr class="my-2 text-muted opacity-25">
-            
-            <div class="detail-text">
-              <i class="bi bi-clock"></i> Jam Log: <strong>${item.waktu}</strong> 
-              (<span class="${statusTextClass}">${item.status}</span>)
-            </div>
-            <div class="detail-text">
-              <i class="bi bi-journal-text"></i> Tugas: ${item.uraianTugas || '-'}
-            </div>
-            <div class="detail-text">
-              <i class="bi bi-check-circle"></i> Output: ${item.outputKegiatan || '-'}
-            </div>
-
-            <button class="btn btn-outline-primary btn-sm btn-lokasi w-100 mt-3" 
-              onclick="focusMarker(${item.lat}, ${item.lng}, '${item.nama}', '${item.keterangan}')">
-              <i class="bi bi-crosshair"></i> Cek Lokasi Peta
-            </button>
-          `;
-          container.appendChild(card);
-
-          // Tambah Pin ke Peta
-          if (item.lat && item.lng) {
-            let marker = L.marker([item.lat, item.lng])
-              .bindPopup(`
-                <div class="text-center">
-                  <strong>${item.nama}</strong><br>
-                  <span class="badge ${badgeColor} my-1">${item.keterangan}</span><br>
-                  <small>${item.waktu}</small>
-                </div>
-              `);
-            markersLayer.addLayer(marker);
-            mapBounds.push([item.lat, item.lng]);
-          }
-        });
-
-        // Autofit peta
-        if (mapBounds.length > 0) {
-          map.fitBounds(mapBounds, { padding: [20, 20] });
-        }
+        // Balik array agar data terbaru selalu di atas, lalu simpan ke memori
+        masterData = data.reverse();
+        
+        // Render data sesuai filter yang aktif (Default: Harian)
+        renderData(); 
       })
       .catch(err => {
         document.getElementById('loading').style.display = 'none';
-        container.innerHTML = `
+        document.getElementById('data-container').innerHTML = `
           <div class="alert alert-danger text-center small rounded-4">
             <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
             Koneksi server gagal: ${err}
@@ -242,11 +209,107 @@
       });
   }
 
+  // Fungsi Render & Filter (Dipanggil saat Dropdown berubah)
+  function renderData() {
+    const container = document.getElementById('data-container');
+    const filterType = document.getElementById('filterWaktu').value;
+    container.innerHTML = '';
+    markersLayer.clearLayers();
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    // Filter array berdasarkan pilihan dropdown
+    let filteredData = masterData.filter(item => {
+      let itemDate = parseSheetDate(item.timestamp);
+      let itemDayStart = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
+
+      if (filterType === 'harian') {
+        return itemDayStart === todayStart;
+      } else if (filterType === 'mingguan') {
+        let diffDays = (todayStart - itemDayStart) / (1000 * 60 * 60 * 24);
+        return diffDays >= 0 && diffDays <= 7;
+      } else if (filterType === 'bulanan') {
+        return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+      }
+      return true; // opsi 'semua'
+    });
+
+    // Handle jika setelah difilter data kosong
+    if (filteredData.length === 0) {
+      container.innerHTML = `
+        <div class="alert alert-secondary text-center small rounded-4 mt-3">
+          <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+          Tidak ada data absensi untuk kategori waktu ini.
+        </div>`;
+      return;
+    }
+
+    let mapBounds = [];
+
+    filteredData.forEach(item => {
+      let isMasuk = item.keterangan.toUpperCase() === 'MASUK';
+      let badgeColor = isMasuk ? 'bg-success' : 'bg-warning text-dark';
+      let iconStatus = isMasuk ? 'bi-box-arrow-in-right' : 'bi-box-arrow-right';
+      
+      let statusTextClass = item.status.toLowerCase().includes('terlambat') ? 'text-danger fw-bold' : 'text-success fw-bold';
+
+      // Buat UI Card
+      let card = document.createElement('div');
+      card.className = 'card absen-card p-3';
+      card.innerHTML = `
+        <div class="card-title-row">
+          <div>
+            <h6 class="mb-0 fw-bold">${item.nama}</h6>
+            <div class="small text-muted" style="font-size: 0.75rem;">${item.timestamp}</div>
+          </div>
+          <span class="badge ${badgeColor}"><i class="bi ${iconStatus}"></i> ${item.keterangan}</span>
+        </div>
+        
+        <hr class="my-2 text-muted opacity-25">
+        
+        <div class="detail-text">
+          <i class="bi bi-clock"></i> Jam Log: <strong>${item.waktu}</strong> 
+          (<span class="${statusTextClass}">${item.status}</span>)
+        </div>
+        <div class="detail-text">
+          <i class="bi bi-journal-text"></i> Tugas: ${item.uraianTugas || '-'}
+        </div>
+        <div class="detail-text">
+          <i class="bi bi-check-circle"></i> Output: ${item.outputKegiatan || '-'}
+        </div>
+
+        <button class="btn btn-outline-primary btn-sm btn-lokasi w-100 mt-3" 
+          onclick="focusMarker(${item.lat}, ${item.lng}, '${item.nama}', '${item.keterangan}')">
+          <i class="bi bi-crosshair"></i> Cek Lokasi Peta
+        </button>
+      `;
+      container.appendChild(card);
+
+      // Tambah Pin ke Peta
+      if (item.lat && item.lng) {
+        let marker = L.marker([item.lat, item.lng])
+          .bindPopup(`
+            <div class="text-center">
+              <strong>${item.nama}</strong><br>
+              <span class="badge ${badgeColor} my-1">${item.keterangan}</span><br>
+              <small>${item.waktu}</small>
+            </div>
+          `);
+        markersLayer.addLayer(marker);
+        mapBounds.push([item.lat, item.lng]);
+      }
+    });
+
+    // Auto-fokus Peta
+    if (mapBounds.length > 0) {
+      map.fitBounds(mapBounds, { padding: [20, 20] });
+    }
+  }
+
   function focusMarker(lat, lng, nama, ket) {
     if (lat && lng) {
-      // Smooth scroll kembali ke atas (ke arah peta)
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      
       map.flyTo([lat, lng], 17, { duration: 1.5 });
       L.popup()
         .setLatLng([lat, lng])
@@ -257,9 +320,10 @@
     }
   }
 
+  // Mulai eksekusi
   window.onload = function() {
     initMap();
-    loadData();
+    fetchData(); // Ambil data saat halaman pertama dimuat
   };
 </script>
 
